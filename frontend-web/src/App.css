@@ -1,0 +1,178 @@
+.pagina {
+  display: grid;
+  grid-template-columns: 240px 1fr;
+  min-height: 100vh;
+  background-color: #f4f7f4;
+}
+
+.menu {
+  background-color: #1f5f32;
+  color: white;
+  padding: 32px 22px;
+}
+
+.menu h1 {
+  margin: 0;
+  font-size: 28px;
+}
+
+.menu p {
+  color: #c8e6c9;
+  margin: 5px 0 35px;
+}
+
+.menu nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.menu button {
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #e8f5e9;
+  cursor: pointer;
+  padding: 13px;
+  text-align: left;
+}
+
+.menu button:hover,
+.menu button.ativo {
+  background-color: #ffffff20;
+  color: white;
+}
+
+.conteudo {
+  padding: 35px;
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+header h2 {
+  color: #263238;
+  font-size: 28px;
+  margin: 0;
+}
+
+header p {
+  color: #66736a;
+  margin-top: 5px;
+}
+
+.nova-campanha {
+  background-color: #2e7d32;
+  border: none;
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  padding: 12px 18px;
+}
+
+.indicadores {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin: 30px 0;
+}
+
+.indicadores article {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px #0000000d;
+  padding: 20px;
+}
+
+.indicadores span {
+  color: #66736a;
+  display: block;
+  font-size: 14px;
+  margin-bottom: 12px;
+}
+
+.indicadores strong {
+  color: #263238;
+  font-size: 28px;
+}
+
+.tabela-container {
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px #0000000d;
+  padding: 22px;
+}
+
+.titulo-tabela {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.titulo-tabela h3 {
+  color: #263238;
+  margin: 0 0 20px;
+}
+
+.titulo-tabela button {
+  background: transparent;
+  border: none;
+  color: #2e7d32;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+th,
+td {
+  border-bottom: 1px solid #e5e9e6;
+  padding: 15px 8px;
+  text-align: left;
+}
+
+th {
+  color: #66736a;
+  font-size: 13px;
+}
+
+td {
+  color: #37443b;
+}
+
+.status {
+  border-radius: 20px;
+  display: inline-block;
+  font-size: 12px;
+  padding: 6px 11px;
+}
+
+.status.ativa {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.status.planejada {
+  background-color: #fff3cd;
+  color: #8a6d1d;
+}
+
+@media (max-width: 900px) {
+  .pagina {
+    grid-template-columns: 1fr;
+  }
+
+  .menu {
+    display: none;
+  }
+
+  .indicadores {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}

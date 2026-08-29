@@ -1,0 +1,20 @@
+# Dependências
+node_modules/
+
+# Arquivos gerados
+dist/
+build/
+
+# Variáveis de ambiente
+.env
+.env.local
+
+# Expo
+.expo/
+
+# Logs
+*.log
+
+# Arquivos do sistema
+.DS_Store
+Thumbs.db
