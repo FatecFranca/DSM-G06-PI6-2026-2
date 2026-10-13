@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import * as SecureStore from "expo-secure-store";
 import { api } from "../services/api";
+import PainelDoacoes from "./PainelDoacoes";
 
 export default function DoacoesSprint2() {
   const [nome, setNome] = useState("");
@@ -127,6 +128,8 @@ export default function DoacoesSprint2() {
             <Text style={styles.descricao}>
               Bem-vindo à sua conta de doador.
             </Text>
+
+            <PainelDoacoes />
 
             <Pressable
               accessibilityRole="button"

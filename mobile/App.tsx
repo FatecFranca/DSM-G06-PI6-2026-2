@@ -13,8 +13,11 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar style="dark" />
 
-      <ScrollView keyboardShouldPersistTaps="handled">
-        <View style={styles.cabecalho}>
+<ScrollView
+  keyboardShouldPersistTaps="handled"
+  automaticallyAdjustKeyboardInsets
+>
+          <View style={styles.cabecalho}>
           <Text style={styles.logo}>DoeFácil</Text>
 
           <Text style={styles.subtitulo}>
