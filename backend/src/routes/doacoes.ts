@@ -1,4 +1,5 @@
 import { Router } from "express";
+import type { PoolClient } from "pg";
 import { db } from "../db";
 import { proteger } from "../proteger";
 import { exigir, idValido } from "../validar";
@@ -50,6 +51,37 @@ function validarItens(valor: unknown): ItemDoado[] {
   );
 
   return itens;
+}
+
+function validarObservacao(valor: unknown) {
+  exigir(
+    valor == null || typeof valor === "string",
+    "A observação deve ser um texto."
+  );
+
+  const texto = typeof valor === "string" ? valor.trim() || null : null;
+  exigir(!texto || texto.length <= 1000, "Use até 1000 caracteres na observação.");
+  return texto;
+}
+
+async function exigirDoacaoEditavel(
+  cliente: PoolClient,
+  idDoacao: number,
+  idDoador: number
+) {
+  const { rows } = await cliente.query(
+    `SELECT status FROM doacao
+     WHERE id_doacao = $1 AND id_doador = $2
+     FOR UPDATE`,
+    [idDoacao, idDoador]
+  );
+
+  exigir(rows.length === 1, "Doação não encontrada.", 404);
+  exigir(
+    rows[0].status === "CADASTRADA",
+    "Somente doações aguardando recebimento podem ser alteradas.",
+    409
+  );
 }
 
 rotas.get("/minhas", proteger("DOADOR"), async (_req, res) => {
@@ -165,6 +197,89 @@ rotas.post("/", proteger("DOADOR"), async (req, res) => {
 
     await cliente.query("COMMIT");
     res.status(201).json(doacao);
+  } catch (erro) {
+    await cliente.query("ROLLBACK");
+    throw erro;
+  } finally {
+    cliente.release();
+  }
+});
+
+rotas.put("/:id", proteger("DOADOR"), async (req, res) => {
+  const idDoacao = idValido(req.params.id);
+  exigir(idDoacao <= 2147483647, "Informe uma doação válida.");
+
+  const idDoador = res.locals.usuario.id_usuario;
+  const corpo = req.body ?? {};
+  const itens = validarItens(corpo.itens);
+  const observacao = validarObservacao(corpo.observacao);
+  const cliente = await db.connect();
+
+  try {
+    await cliente.query("BEGIN");
+    await exigirDoacaoEditavel(cliente, idDoacao, idDoador);
+
+    const cadastrados = await cliente.query(
+      `SELECT id_item FROM item
+       WHERE id_item = ANY($1::int[]) FOR SHARE`,
+      [itens.map((item) => item.id_item)]
+    );
+
+    exigir(
+      cadastrados.rows.length === itens.length,
+      "Um dos itens não está cadastrado."
+    );
+
+    await cliente.query(
+      "DELETE FROM item_doacao WHERE id_doacao = $1",
+      [idDoacao]
+    );
+
+    for (const item of itens) {
+      await cliente.query(
+        `INSERT INTO item_doacao (id_doacao, id_item, quantidade)
+         VALUES ($1, $2, $3)`,
+        [idDoacao, item.id_item, item.quantidade]
+      );
+    }
+
+    const { rows } = await cliente.query(
+      `UPDATE doacao SET observacao = $2
+       WHERE id_doacao = $1 AND id_doador = $3
+       RETURNING id_doacao, id_campanha, data_cadastro, status, observacao`,
+      [idDoacao, observacao, idDoador]
+    );
+
+    await cliente.query("COMMIT");
+    res.json(rows[0]);
+  } catch (erro) {
+    await cliente.query("ROLLBACK");
+    throw erro;
+  } finally {
+    cliente.release();
+  }
+});
+
+rotas.delete("/:id", proteger("DOADOR"), async (req, res) => {
+  const idDoacao = idValido(req.params.id);
+  exigir(idDoacao <= 2147483647, "Informe uma doação válida.");
+
+  const idDoador = res.locals.usuario.id_usuario;
+  const cliente = await db.connect();
+
+  try {
+    await cliente.query("BEGIN");
+    await exigirDoacaoEditavel(cliente, idDoacao, idDoador);
+
+    const { rows } = await cliente.query(
+      `UPDATE doacao SET status = 'CANCELADA'
+       WHERE id_doacao = $1 AND id_doador = $2
+       RETURNING id_doacao, id_campanha, data_cadastro, status, observacao`,
+      [idDoacao, idDoador]
+    );
+
+    await cliente.query("COMMIT");
+    res.json(rows[0]);
   } catch (erro) {
     await cliente.query("ROLLBACK");
     throw erro;

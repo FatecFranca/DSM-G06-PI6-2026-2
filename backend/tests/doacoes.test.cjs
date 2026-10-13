@@ -164,6 +164,147 @@ test("cadastro rejeita doacao sem itens", async () => {
   assert.equal(resposta.status, 400);
 });
 
+for (const metodo of ["put", "delete"]) {
+  test(`${metodo.toUpperCase()} exige login`, async () => {
+    const resposta = await request(app)[metodo](
+      `/api/doacoes/${minhaDoacao}`
+    ).send(dadosDaDoacao());
+
+    assert.equal(resposta.status, 401);
+  });
+
+  test(`${metodo.toUpperCase()} bloqueia doacao de outro doador`, async () => {
+    const resposta = await request(app)[metodo](
+      `/api/doacoes/${outraDoacao}`
+    )
+      .set("Authorization", `Bearer ${token}`)
+      .send(dadosDaDoacao());
+
+    assert.equal(resposta.status, 404);
+
+    const { rows } = await db.query(
+      "SELECT status FROM doacao WHERE id_doacao = $1",
+      [outraDoacao]
+    );
+    assert.equal(rows[0].status, "CADASTRADA");
+  });
+
+  test(`${metodo.toUpperCase()} bloqueia doacao recebida`, async () => {
+    const id = await criarDoacao(doador);
+
+    await db.query(
+      "UPDATE doacao SET status = 'RECEBIDA' WHERE id_doacao = $1",
+      [id]
+    );
+
+    const resposta = await request(app)[metodo](`/api/doacoes/${id}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send(dadosDaDoacao());
+
+    assert.equal(resposta.status, 409);
+
+    const { rows } = await db.query(
+      "SELECT status FROM doacao WHERE id_doacao = $1",
+      [id]
+    );
+    assert.equal(rows[0].status, "RECEBIDA");
+  });
+}
+
+test("doador edita quantidade e observacao da propria doacao", async () => {
+  const id = await criarDoacao(doador);
+
+  const resposta = await request(app)
+    .put(`/api/doacoes/${id}`)
+    .set("Authorization", `Bearer ${token}`)
+    .send({
+      itens: [{ id_item: item, quantidade: 2 }],
+      observacao: "Quantidade corrigida",
+      id_doador: outroDoador,
+      status: "RECEBIDA"
+    });
+
+  assert.equal(resposta.status, 200);
+  assert.equal(resposta.body.id_doacao, id);
+
+  const { rows } = await db.query(
+    "SELECT id_doador, status, observacao FROM doacao WHERE id_doacao = $1",
+    [id]
+  );
+
+  assert.equal(rows[0].id_doador, doador);
+  assert.equal(rows[0].status, "CADASTRADA");
+  assert.equal(rows[0].observacao, "Quantidade corrigida");
+
+  const itensSalvos = await db.query(
+    "SELECT id_item, quantidade FROM item_doacao WHERE id_doacao = $1",
+    [id]
+  );
+
+  assert.equal(itensSalvos.rows.length, 1);
+  assert.equal(itensSalvos.rows[0].id_item, item);
+  assert.equal(Number(itensSalvos.rows[0].quantidade), 2);
+});
+
+test("edicao invalida preserva a quantidade anterior", async () => {
+  const id = await criarDoacao(doador);
+
+  const resposta = await request(app)
+    .put(`/api/doacoes/${id}`)
+    .set("Authorization", `Bearer ${token}`)
+    .send({ itens: [{ id_item: item, quantidade: 0 }] });
+
+  assert.equal(resposta.status, 400);
+
+  const { rows } = await db.query(
+    "SELECT quantidade FROM item_doacao WHERE id_doacao = $1",
+    [id]
+  );
+
+  assert.equal(rows.length, 1);
+  assert.equal(Number(rows[0].quantidade), 1);
+});
+
+test("doador cancela a propria doacao mantendo o historico", async () => {
+  const id = await criarDoacao(doador);
+
+  const resposta = await request(app)
+    .delete(`/api/doacoes/${id}`)
+    .set("Authorization", `Bearer ${token}`);
+
+  assert.equal(resposta.status, 200);
+  assert.equal(resposta.body.status, "CANCELADA");
+
+  const { rows } = await db.query(
+    "SELECT status FROM doacao WHERE id_doacao = $1",
+    [id]
+  );
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].status, "CANCELADA");
+
+  const itensSalvos = await db.query(
+    "SELECT id_item FROM item_doacao WHERE id_doacao = $1",
+    [id]
+  );
+  assert.equal(itensSalvos.rows.length, 1);
+});
+
+test("doacao cancelada nao pode ser editada", async () => {
+  const id = await criarDoacao(doador);
+
+  await db.query(
+    "UPDATE doacao SET status = 'CANCELADA' WHERE id_doacao = $1",
+    [id]
+  );
+
+  const resposta = await request(app)
+    .put(`/api/doacoes/${id}`)
+    .set("Authorization", `Bearer ${token}`)
+    .send(dadosDaDoacao());
+
+  assert.equal(resposta.status, 409);
+});
+
 after(async () => {
   try {
     if (usuarios.length) {
