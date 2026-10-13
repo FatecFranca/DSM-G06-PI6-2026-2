@@ -6,7 +6,7 @@ services:
       POSTGRES_USER: doefacil
       POSTGRES_PASSWORD: doefacil_local
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - doefacil_pg:/var/lib/postgresql/data
       - ./database/modelo-logico.sql:/docker-entrypoint-initdb.d/01-modelo.sql:ro
