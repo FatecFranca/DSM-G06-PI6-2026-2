@@ -1,0 +1,9 @@
+{
+  "fonte": "givefoodbasededados.json (snapshot existente no repositorio)",
+  "origem": "https://www.givefood.org.uk/api/2/foodbanks/",
+  "sha256": "7068c9749ed80ffb2691e11b328a5599ea0aa20918dc4b3de566bdee4df81461",
+  "registros_brutos": 1023,
+  "duplicados_por_id": 0,
+  "inativos_ou_invalidos": 0,
+  "registros_tratados": 1023
+}

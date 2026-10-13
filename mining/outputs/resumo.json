@@ -1,0 +1,11 @@
+{
+  "tecnica": "K-Means preliminar por localizacao",
+  "k": 3,
+  "registros": 1023,
+  "silhouette": 0.42655731672335884,
+  "por_grupo": {
+    "2": 503,
+    "0": 370,
+    "1": 150
+  }
+}
