@@ -25,6 +25,18 @@ const situacoes: Record<string, string> = {
   CANCELADA: "Cancelada"
 };
 
+function lerQuantidade(texto: string, nome: string) {
+  const limpo = texto.trim();
+  const valor = Number(limpo.replace(",", "."));
+
+  if (!/^\d+([.,]\d{1,2})?$/.test(limpo) ||
+      valor < 0.01 || valor > 99999999.99) {
+    throw new Error(`Informe uma quantidade positiva para ${nome}, como 3 ou 1,5.`);
+  }
+
+  return valor;
+}
+
 export default function PainelDoacoes() {
   const [itens, setItens] = useState<Item[]>([]);
   const [doacoes, setDoacoes] = useState<Doacao[]>([]);
@@ -34,6 +46,8 @@ export default function PainelDoacoes() {
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
   const [erro, setErro] = useState("");
+  const [editando, setEditando] = useState<Doacao | null>(null);
+  const [quantidadesEditadas, setQuantidadesEditadas] = useState<Record<number, string>>({});
 
   const montado = useRef(true);
   const envioEmAndamento = useRef(false);
@@ -91,26 +105,49 @@ export default function PainelDoacoes() {
   const selecionado = itens.find((item) => item.id_item === idItem);
   const ocupado = carregando || enviando;
 
-  async function cadastrarDoacao() {
+  function limparFormulario() {
+    setEditando(null);
+    setQuantidadesEditadas({});
+    setQuantidade("");
+    setObservacao("");
+    setIdItem(null);
+  }
+
+  function iniciarEdicao(doacao: Doacao) {
+    if (ocupado || doacao.status !== "CADASTRADA") return;
+
+    setEditando(doacao);
+    setQuantidadesEditadas(Object.fromEntries(
+      doacao.itens.map((item) => [
+        item.id_item,
+        String(Number(item.quantidade)).replace(".", ",")
+      ])
+    ));
+    setObservacao(doacao.observacao || "");
+
+    Alert.alert("Editar doação", "O formulário acima foi preenchido. Role para cima para fazer as alterações.");
+  }
+
+  async function salvarDoacao() {
     if (carregando || envioEmAndamento.current) return;
 
-    const texto = quantidade.trim();
-    const valor = Number(texto.replace(",", "."));
+    let itensSalvos: (Item & { quantidade: number })[];
 
-    if (!selecionado) {
-      Alert.alert("DoeFácil", "Escolha o item que deseja doar.");
-      return;
-    }
-
-    if (
-      !/^\d+([.,]\d{1,2})?$/.test(texto) ||
-      valor < 0.01 ||
-      valor > 99999999.99
-    ) {
-      Alert.alert(
-        "DoeFácil",
-        "Informe uma quantidade positiva, como 3 ou 1,5."
-      );
+    try {
+      if (editando) {
+        itensSalvos = editando.itens.map((item) => ({
+          ...item,
+          quantidade: lerQuantidade(quantidadesEditadas[item.id_item] || "", item.nome)
+        }));
+      } else {
+        if (!selecionado) throw new Error("Escolha o item que deseja doar.");
+        itensSalvos = [{
+          ...selecionado,
+          quantidade: lerQuantidade(quantidade, selecionado.nome)
+        }];
+      }
+    } catch (falha) {
+      Alert.alert("DoeFácil", falha instanceof Error ? falha.message : "Confira as quantidades.");
       return;
     }
 
@@ -119,16 +156,14 @@ export default function PainelDoacoes() {
     Keyboard.dismiss();
 
     try {
-      const resposta = await api("/doacoes", {
-        method: "POST",
+      const resposta = await api(editando ? `/doacoes/${editando.id_doacao}` : "/doacoes", {
+        method: editando ? "PUT" : "POST",
         body: JSON.stringify({
           observacao: observacao.trim() || null,
-          itens: [
-            {
-              id_item: selecionado.id_item,
-              quantidade: valor
-            }
-          ]
+          itens: itensSalvos.map((item) => ({
+            id_item: item.id_item,
+            quantidade: item.quantidade
+          }))
         })
       });
 
@@ -138,18 +173,19 @@ export default function PainelDoacoes() {
         id_doacao: resposta.id_doacao,
         status: resposta.status,
         observacao: resposta.observacao,
-        titulo_campanha: null,
-        itens: [{ ...selecionado, quantidade: valor }]
+        titulo_campanha: editando?.titulo_campanha || null,
+        itens: itensSalvos
       };
 
-      setDoacoes((atuais) => [nova, ...atuais]);
-      setQuantidade("");
-      setObservacao("");
-      setIdItem(null);
+      setDoacoes((atuais) => editando
+        ? atuais.map((doacao) => doacao.id_doacao === nova.id_doacao ? nova : doacao)
+        : [nova, ...atuais]
+      );
+      limparFormulario();
 
       Alert.alert(
-        "Doação cadastrada",
-        "Sua doação está aguardando o recebimento pela instituição."
+        editando ? "Doação atualizada" : "Doação cadastrada",
+        editando ? "As alterações foram salvas." : "Sua doação está aguardando o recebimento pela instituição."
       );
     } catch (falha) {
       if (montado.current) {
@@ -167,12 +203,52 @@ export default function PainelDoacoes() {
     }
   }
 
+  async function cancelarDoacao(doacao: Doacao) {
+    if (carregando || envioEmAndamento.current) return;
+
+    envioEmAndamento.current = true;
+    setEnviando(true);
+
+    try {
+      const resposta = await api(`/doacoes/${doacao.id_doacao}`, { method: "DELETE" });
+
+      if (!montado.current) return;
+
+      setDoacoes((atuais) => atuais.map((atual) =>
+        atual.id_doacao === doacao.id_doacao
+          ? { ...atual, status: resposta.status }
+          : atual
+      ));
+
+      if (editando?.id_doacao === doacao.id_doacao) limparFormulario();
+      Alert.alert("Doação cancelada", "O registro foi mantido no seu histórico.");
+    } catch (falha) {
+      if (montado.current) {
+        Alert.alert("DoeFácil", falha instanceof Error ? falha.message : "Tente novamente.");
+      }
+    } finally {
+      envioEmAndamento.current = false;
+      if (montado.current) setEnviando(false);
+    }
+  }
+
+  function confirmarCancelamento(doacao: Doacao) {
+    if (ocupado || doacao.status !== "CADASTRADA") return;
+
+    Alert.alert("Cancelar doação", `Deseja cancelar a doação #${doacao.id_doacao}?`, [
+      { text: "Voltar", style: "cancel" },
+      { text: "Cancelar doação", style: "destructive", onPress: () => void cancelarDoacao(doacao) }
+    ]);
+  }
+
   return (
     <View style={styles.painel}>
-      <Text style={styles.titulo}>Nova doação</Text>
+      <Text style={styles.titulo}>
+        {editando ? `Editar doação #${editando.id_doacao}` : "Nova doação"}
+      </Text>
 
       <Text style={styles.descricao}>
-        Escolha um item e informe a quantidade.
+        {editando ? "Corrija as quantidades e a observação." : "Escolha um item e informe a quantidade."}
       </Text>
 
       {erro ? <Text style={styles.erro}>{erro}</Text> : null}
@@ -181,51 +257,74 @@ export default function PainelDoacoes() {
         <ActivityIndicator color="#2E7D32" />
       ) : null}
 
-      <Text style={styles.rotulo}>Item</Text>
+      {editando ? (
+        <View>
+          {editando.itens.map((item) => (
+            <View key={item.id_item}>
+              <Text style={styles.rotulo}>{item.nome} ({item.unidade_medida})</Text>
+              <TextInput
+                accessibilityLabel={`Quantidade de ${item.nome}`}
+                style={styles.campo}
+                keyboardType="decimal-pad"
+                value={quantidadesEditadas[item.id_item] || ""}
+                onChangeText={(texto) => setQuantidadesEditadas((atuais) => ({
+                  ...atuais, [item.id_item]: texto
+                }))}
+                editable={!ocupado}
+                maxLength={12}
+              />
+            </View>
+          ))}
+        </View>
+      ) : (
+        <>
+          <Text style={styles.rotulo}>Item</Text>
 
-      {itens.map((item) => (
-        <Pressable
-          key={item.id_item}
-          accessibilityRole="radio"
-          accessibilityState={{
-            checked: idItem === item.id_item,
-            disabled: ocupado
-          }}
-          disabled={ocupado}
-          onPress={() => setIdItem(item.id_item)}
-          style={[
-            styles.opcao,
-            idItem === item.id_item && styles.selecionada
-          ]}
-        >
-          <Text style={styles.textoOpcao}>
-            {item.nome} ({item.unidade_medida})
+          {itens.map((item) => (
+            <Pressable
+              key={item.id_item}
+              accessibilityRole="radio"
+              accessibilityState={{
+                checked: idItem === item.id_item,
+                disabled: ocupado
+              }}
+              disabled={ocupado}
+              onPress={() => setIdItem(item.id_item)}
+              style={[
+                styles.opcao,
+                idItem === item.id_item && styles.selecionada
+              ]}
+            >
+              <Text style={styles.textoOpcao}>
+                {item.nome} ({item.unidade_medida})
+              </Text>
+            </Pressable>
+          ))}
+
+          {!carregando && !erro && itens.length === 0 ? (
+            <Text style={styles.descricao}>
+              Nenhum item disponível no momento.
+            </Text>
+          ) : null}
+
+          <Text style={styles.rotulo}>
+            Quantidade
+            {selecionado ? ` (${selecionado.unidade_medida})` : ""}
           </Text>
-        </Pressable>
-      ))}
 
-      {!carregando && !erro && itens.length === 0 ? (
-        <Text style={styles.descricao}>
-          Nenhum item disponível no momento.
-        </Text>
-      ) : null}
-
-      <Text style={styles.rotulo}>
-        Quantidade
-        {selecionado ? ` (${selecionado.unidade_medida})` : ""}
-      </Text>
-
-      <TextInput
-        accessibilityLabel="Quantidade da doação"
-        style={styles.campo}
-        placeholder="Ex.: 3"
-        placeholderTextColor="#78877C"
-        keyboardType="decimal-pad"
-        value={quantidade}
-        onChangeText={setQuantidade}
-        editable={!ocupado}
-        maxLength={12}
-      />
+          <TextInput
+            accessibilityLabel="Quantidade da doação"
+            style={styles.campo}
+            placeholder="Ex.: 3"
+            placeholderTextColor="#78877C"
+            keyboardType="decimal-pad"
+            value={quantidade}
+            onChangeText={setQuantidade}
+            editable={!ocupado}
+            maxLength={12}
+          />
+        </>
+      )}
 
       <Text style={styles.rotulo}>Observação (opcional)</Text>
 
@@ -243,20 +342,33 @@ export default function PainelDoacoes() {
 
       <Pressable
         accessibilityRole="button"
-        disabled={ocupado || itens.length === 0}
-        onPress={() => void cadastrarDoacao()}
+        disabled={ocupado || (!editando && itens.length === 0)}
+        onPress={() => void salvarDoacao()}
         style={({ pressed }) => [
           styles.botao,
-          (pressed || ocupado || itens.length === 0) &&
+          (pressed || ocupado || (!editando && itens.length === 0)) &&
             styles.desabilitado
         ]}
       >
         {enviando ? (
           <ActivityIndicator color="#FFFFFF" />
         ) : (
-          <Text style={styles.textoBotao}>Cadastrar doação</Text>
+          <Text style={styles.textoBotao}>
+            {editando ? "Salvar alterações" : "Cadastrar doação"}
+          </Text>
         )}
       </Pressable>
+
+      {editando ? (
+        <Pressable
+          accessibilityRole="button"
+          disabled={ocupado}
+          onPress={limparFormulario}
+          style={[styles.atualizar, styles.cancelarEdicao, ocupado && styles.desabilitado]}
+        >
+          <Text style={styles.textoOpcao}>Cancelar edição</Text>
+        </Pressable>
+      ) : null}
 
       <View style={styles.divisor} />
 
@@ -286,7 +398,7 @@ export default function PainelDoacoes() {
             Doação #{doacao.id_doacao}
           </Text>
 
-          <Text style={styles.situacao}>
+          <Text style={[styles.situacao, doacao.status === "CANCELADA" && styles.situacaoCancelada]}>
             {situacoes[doacao.status] || doacao.status}
           </Text>
 
@@ -308,6 +420,29 @@ export default function PainelDoacoes() {
             <Text style={styles.descricao}>
               {doacao.observacao}
             </Text>
+          ) : null}
+
+          {doacao.status === "CADASTRADA" ? (
+            <View style={styles.acoes}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Editar doação ${doacao.id_doacao}`}
+                disabled={ocupado}
+                onPress={() => iniciarEdicao(doacao)}
+                style={({ pressed }) => [styles.acaoEditar, (pressed || ocupado) && styles.desabilitado]}
+              >
+                <Text style={styles.textoOpcao}>Editar</Text>
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={`Cancelar doação ${doacao.id_doacao}`}
+                disabled={ocupado}
+                onPress={() => confirmarCancelamento(doacao)}
+                style={({ pressed }) => [styles.acaoCancelar, (pressed || ocupado) && styles.desabilitado]}
+              >
+                <Text style={styles.textoCancelar}>Cancelar doação</Text>
+              </Pressable>
+            </View>
           ) : null}
         </View>
       ))}
@@ -381,5 +516,11 @@ const styles = StyleSheet.create({
   },
   erro: {
     color: "#A52020", fontSize: 14, marginBottom: 12
-  }
+  },
+  acoes: { gap: 8, marginTop: 10 },
+  acaoEditar: { borderWidth: 1, borderColor: "#2E7D32", borderRadius: 10, padding: 12, alignItems: "center" },
+  acaoCancelar: { borderWidth: 1, borderColor: "#C76C6C", borderRadius: 10, padding: 12, alignItems: "center" },
+  textoCancelar: { color: "#A52020", fontWeight: "600", fontSize: 15 },
+  cancelarEdicao: { marginTop: 10, marginBottom: 0 },
+  situacaoCancelada: { color: "#607468" }
 });
