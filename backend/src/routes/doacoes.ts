@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 import type { PoolClient } from "pg";
 import { db } from "../db";
@@ -60,7 +61,11 @@ function validarObservacao(valor: unknown) {
   );
 
   const texto = typeof valor === "string" ? valor.trim() || null : null;
-  exigir(!texto || texto.length <= 1000, "Use até 1000 caracteres na observação.");
+  exigir(
+    !texto || texto.length <= 1000,
+    "Use até 1000 caracteres na observação."
+  );
+
   return texto;
 }
 
@@ -84,6 +89,27 @@ async function exigirDoacaoEditavel(
   );
 }
 
+// Consulta de todas as doações para funcionários e administradores
+rotas.get(
+  "/",
+  proteger("FUNCIONARIO", "ADMINISTRADOR"),
+  async (_req, res) => {
+    const { rows } = await db.query(`
+      SELECT
+        d.id_doacao,
+        u.nome AS doador,
+        d.status,
+        d.data_cadastro
+      FROM doacao d
+      JOIN usuario u ON u.id_usuario = d.id_doador
+      ORDER BY d.id_doacao DESC
+    `);
+
+    res.json(rows);
+  }
+);
+
+// Consulta das próprias doações
 rotas.get("/minhas", proteger("DOADOR"), async (_req, res) => {
   const idDoador = res.locals.usuario.id_usuario;
 
@@ -110,6 +136,7 @@ rotas.get("/minhas", proteger("DOADOR"), async (_req, res) => {
   res.json(rows);
 });
 
+// Cadastro de doação
 rotas.post("/", proteger("DOADOR"), async (req, res) => {
   const corpo = req.body ?? {};
   const itens = validarItens(corpo.itens);
@@ -205,6 +232,7 @@ rotas.post("/", proteger("DOADOR"), async (req, res) => {
   }
 });
 
+// Edição de doação
 rotas.put("/:id", proteger("DOADOR"), async (req, res) => {
   const idDoacao = idValido(req.params.id);
   exigir(idDoacao <= 2147483647, "Informe uma doação válida.");
@@ -260,6 +288,7 @@ rotas.put("/:id", proteger("DOADOR"), async (req, res) => {
   }
 });
 
+// Cancelamento de doação
 rotas.delete("/:id", proteger("DOADOR"), async (req, res) => {
   const idDoacao = idValido(req.params.id);
   exigir(idDoacao <= 2147483647, "Informe uma doação válida.");
