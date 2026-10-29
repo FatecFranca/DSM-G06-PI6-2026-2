@@ -2,18 +2,26 @@ import CampanhasSprint2 from "./components/CampanhasSprint2";
 import "./App.css";
 
 function App() {
+  function abrirCampanhas() {
+    document.getElementById("campanhas")?.scrollIntoView({
+      behavior: "smooth"
+    });
+  }
+
   return (
     <div className="pagina">
       <aside className="menu">
         <h1>DoeFácil</h1>
         <p>Painel administrativo</p>
 
-        <nav>
-          <button className="ativo">Visão geral</button>
-          <button>Campanhas</button>
-          <button>Doações</button>
-          <button>Estoque</button>
-          <button>Relatórios</button>
+        <nav aria-label="Navegação do painel">
+          <button
+            type="button"
+            className="ativo"
+            onClick={abrirCampanhas}
+          >
+            Campanhas
+          </button>
         </nav>
       </aside>
 
@@ -21,12 +29,13 @@ function App() {
         <header>
           <div>
             <h2>Painel Administrativo</h2>
-            <p>Gerenciamento de Campanhas - Sprint 2</p>
+            <p>Gerencie as campanhas da instituição.</p>
           </div>
         </header>
 
-        {/* Componente integrando o CRUD de campanhas conectado à API */}
-        <CampanhasSprint2 />
+        <div id="campanhas">
+          <CampanhasSprint2 />
+        </div>
       </main>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -8,8 +8,10 @@ import {
   TextInput,
   View
 } from "react-native";
+
 import * as SecureStore from "expo-secure-store";
-import { api } from "../services/api";
+
+import { api, observarSessaoExpirada } from "../services/api";
 import PainelDoacoes from "./PainelDoacoes";
 
 export default function DoacoesSprint2() {
@@ -21,10 +23,27 @@ export default function DoacoesSprint2() {
   const [enviando, setEnviando] = useState(false);
   const [cadastroAtivo, setCadastroAtivo] = useState(false);
   const [senhaVisivel, setSenhaVisivel] = useState(false);
+  const [avisoSessao, setAvisoSessao] = useState("");
+
+  const envioEmAndamento = useRef(false);
+
+  useEffect(() => {
+    return observarSessaoExpirada(() => {
+      setLogado(false);
+      setNomeUsuario("");
+      setSenha("");
+      setSenhaVisivel(false);
+      setCadastroAtivo(false);
+      setAvisoSessao(
+        "Sua sessão expirou. Entre novamente para continuar."
+      );
+    });
+  }, []);
 
   async function executar(acao: () => Promise<void>) {
-    if (enviando) return;
+    if (envioEmAndamento.current) return;
 
+    envioEmAndamento.current = true;
     setEnviando(true);
 
     try {
@@ -35,6 +54,7 @@ export default function DoacoesSprint2() {
         erro instanceof Error ? erro.message : "Tente novamente."
       );
     } finally {
+      envioEmAndamento.current = false;
       setEnviando(false);
     }
   }
@@ -64,9 +84,13 @@ export default function DoacoesSprint2() {
       throw new Error("Use uma conta de doador neste aplicativo.");
     }
 
-    await SecureStore.setItemAsync("doefacil_token", dados.token);
+    await SecureStore.setItemAsync(
+      "doefacil_token",
+      dados.token
+    );
 
     setNomeUsuario(dados.usuario.nome);
+    setAvisoSessao("");
     setLogado(true);
     setSenha("");
     setSenhaVisivel(false);
@@ -80,7 +104,9 @@ export default function DoacoesSprint2() {
     }
 
     if (senha.length < 8) {
-      throw new Error("A senha precisa ter pelo menos 8 caracteres.");
+      throw new Error(
+        "A senha precisa ter pelo menos 8 caracteres."
+      );
     }
 
     await api("/auth/cadastro", {
@@ -93,6 +119,7 @@ export default function DoacoesSprint2() {
     });
 
     setCadastroAtivo(false);
+    setAvisoSessao("");
     setSenha("");
     setSenhaVisivel(false);
 
@@ -110,10 +137,11 @@ export default function DoacoesSprint2() {
     setSenha("");
     setSenhaVisivel(false);
     setCadastroAtivo(false);
+    setAvisoSessao("");
   }
 
   function alternarModo() {
-    setCadastroAtivo(!cadastroAtivo);
+    setCadastroAtivo((atual) => !atual);
     setSenha("");
     setSenhaVisivel(false);
   }
@@ -123,7 +151,9 @@ export default function DoacoesSprint2() {
       <View style={styles.card}>
         {logado ? (
           <>
-            <Text style={styles.titulo}>Olá, {nomeUsuario}!</Text>
+            <Text style={styles.titulo}>
+              Olá, {nomeUsuario}!
+            </Text>
 
             <Text style={styles.descricao}>
               Bem-vindo à sua conta de doador.
@@ -136,17 +166,31 @@ export default function DoacoesSprint2() {
               disabled={enviando}
               style={({ pressed }) => [
                 styles.botao,
-                (pressed || enviando) && styles.botaoPressionado
+                (pressed || enviando) &&
+                  styles.botaoPressionado
               ]}
               onPress={() => void executar(sair)}
             >
-              <Text style={styles.textoBotao}>Sair da conta</Text>
+              <Text style={styles.textoBotao}>
+                Sair da conta
+              </Text>
             </Pressable>
           </>
         ) : (
           <>
+            {avisoSessao ? (
+              <Text
+                accessibilityRole="alert"
+                style={styles.aviso}
+              >
+                {avisoSessao}
+              </Text>
+            ) : null}
+
             <Text style={styles.titulo}>
-              {cadastroAtivo ? "Crie sua conta" : "Acesse sua conta"}
+              {cadastroAtivo
+                ? "Crie sua conta"
+                : "Acesse sua conta"}
             </Text>
 
             <Text style={styles.descricao}>
@@ -155,7 +199,7 @@ export default function DoacoesSprint2() {
                 : "Participe das campanhas e acompanhe suas doações."}
             </Text>
 
-            {cadastroAtivo && (
+            {cadastroAtivo ? (
               <View style={styles.grupo}>
                 <Text style={styles.rotulo}>Nome</Text>
 
@@ -168,9 +212,10 @@ export default function DoacoesSprint2() {
                   onChangeText={setNome}
                   autoCapitalize="words"
                   editable={!enviando}
+                  maxLength={100}
                 />
               </View>
-            )}
+            ) : null}
 
             <View style={styles.grupo}>
               <Text style={styles.rotulo}>E-mail</Text>
@@ -186,6 +231,7 @@ export default function DoacoesSprint2() {
                 autoCorrect={false}
                 keyboardType="email-address"
                 editable={!enviando}
+                maxLength={150}
               />
             </View>
 
@@ -209,11 +255,15 @@ export default function DoacoesSprint2() {
                 <Pressable
                   accessibilityRole="button"
                   accessibilityLabel={
-                    senhaVisivel ? "Ocultar senha" : "Mostrar senha"
+                    senhaVisivel
+                      ? "Ocultar senha"
+                      : "Mostrar senha"
                   }
                   disabled={enviando}
                   style={styles.mostrarSenha}
-                  onPress={() => setSenhaVisivel(!senhaVisivel)}
+                  onPress={() =>
+                    setSenhaVisivel((atual) => !atual)
+                  }
                 >
                   <Text style={styles.textoMostrar}>
                     {senhaVisivel ? "Ocultar" : "Mostrar"}
@@ -221,11 +271,11 @@ export default function DoacoesSprint2() {
                 </Pressable>
               </View>
 
-              {cadastroAtivo && (
+              {cadastroAtivo ? (
                 <Text style={styles.ajuda}>
                   Use pelo menos 8 caracteres.
                 </Text>
-              )}
+              ) : null}
             </View>
 
             <Pressable
@@ -240,10 +290,13 @@ export default function DoacoesSprint2() {
               disabled={enviando}
               style={({ pressed }) => [
                 styles.botao,
-                (pressed || enviando) && styles.botaoPressionado
+                (pressed || enviando) &&
+                  styles.botaoPressionado
               ]}
               onPress={() =>
-                void executar(cadastroAtivo ? cadastrar : entrar)
+                void executar(
+                  cadastroAtivo ? cadastrar : entrar
+                )
               }
             >
               {enviando ? (
@@ -268,12 +321,15 @@ export default function DoacoesSprint2() {
               disabled={enviando}
               style={({ pressed }) => [
                 styles.botaoSecundario,
-                (pressed || enviando) && styles.botaoPressionado
+                (pressed || enviando) &&
+                  styles.botaoPressionado
               ]}
               onPress={alternarModo}
             >
               <Text style={styles.textoSecundario}>
-                {cadastroAtivo ? "Voltar para entrar" : "Quero me cadastrar"}
+                {cadastroAtivo
+                  ? "Voltar para entrar"
+                  : "Quero me cadastrar"}
               </Text>
             </Pressable>
           </>
@@ -294,6 +350,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "#E3EBE4",
     padding: 22
+  },
+  aviso: {
+    color: "#A52020",
+    fontSize: 14,
+    lineHeight: 21,
+    marginBottom: 16
   },
   titulo: {
     color: "#263238",

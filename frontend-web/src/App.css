@@ -176,3 +176,86 @@ td {
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+.formulario-campanha {
+  display: grid;
+  gap: 8px;
+  max-width: 580px;
+  margin: 20px 0 28px;
+}
+
+.formulario-campanha h4 {
+  margin: 4px 0 8px;
+  color: #263238;
+}
+
+.formulario-campanha label {
+  color: #34483a;
+  font-weight: 600;
+}
+
+.formulario-campanha input,
+.formulario-campanha select,
+.formulario-campanha textarea {
+  width: 100%;
+  min-width: 0;
+  padding: 12px;
+  border: 1px solid #bacabd;
+  border-radius: 8px;
+  font: inherit;
+  color: #263238;
+  background: #f8faf8;
+}
+
+.formulario-campanha textarea {
+  resize: vertical;
+}
+
+.campanhas button {
+  padding: 10px 14px;
+  border: 1px solid #2e7d32;
+  border-radius: 8px;
+  color: #1f5f32;
+  background: white;
+  cursor: pointer;
+  font: inherit;
+}
+
+.campanhas button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.campanhas :focus-visible {
+  outline: 3px solid #2e7d32;
+  outline-offset: 3px;
+}
+
+.acoes-campanha {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mensagem-erro {
+  color: #a52020;
+}
+
+.mensagem-sucesso {
+  color: #1f5f32;
+}
+
+.tabela-rolavel {
+  overflow-x: auto;
+}
+
+.campanhas caption {
+  text-align: left;
+  color: #66736a;
+  padding-bottom: 10px;
+}
+
+.campanhas td {
+  vertical-align: top;
+  overflow-wrap: anywhere;
+}
