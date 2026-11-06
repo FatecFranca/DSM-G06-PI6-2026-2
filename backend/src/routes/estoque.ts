@@ -8,6 +8,56 @@ const rotas = Router();
 
 rotas.use(proteger("FUNCIONARIO", "ADMINISTRADOR"));
 
+// Consultar indicadores reais do estoque
+rotas.get("/resumo", async (_req, res) => {
+  const [pendentes, recebidasHoje, estoqueBaixo] = await Promise.all([
+    db.query(`
+      SELECT COUNT(*)::integer AS total
+      FROM doacao
+      WHERE status = 'CADASTRADA'
+    `),
+
+    db.query(`
+      SELECT COUNT(DISTINCT id_doacao)::integer AS total
+      FROM movimentacao_estoque
+      WHERE tipo = 'ENTRADA'
+        AND id_doacao IS NOT NULL
+        AND data_movimentacao >= CURRENT_DATE
+        AND data_movimentacao < CURRENT_DATE + INTERVAL '1 day'
+    `),
+
+    db.query(`
+      SELECT COUNT(*)::integer AS total
+      FROM (
+        SELECT
+          i.id_item,
+          i.estoque_minimo,
+          COALESCE(
+            SUM(
+              CASE
+                WHEN m.tipo = 'ENTRADA' THEN m.quantidade
+                ELSE -m.quantidade
+              END
+            ), 0
+          ) AS saldo
+        FROM item i
+        LEFT JOIN movimentacao_estoque m
+          ON m.id_item = i.id_item
+        GROUP BY i.id_item, i.estoque_minimo
+      ) AS estoque
+      WHERE estoque.estoque_minimo > 0
+        AND estoque.saldo < estoque.estoque_minimo
+    `)
+  ]);
+
+  res.json({
+    aguardando_recebimento: pendentes.rows[0].total,
+    recebidas_hoje: recebidasHoje.rows[0].total,
+    itens_estoque_baixo: estoqueBaixo.rows[0].total
+  });
+});
+
+
 // Consultar saldo de todos os itens
 rotas.get("/", async (_req, res) => {
   const { rows } = await db.query(`

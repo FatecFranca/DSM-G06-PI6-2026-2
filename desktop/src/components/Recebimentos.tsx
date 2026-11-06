@@ -15,7 +15,11 @@ type Item = {
   unidade_medida: string;
 };
 
-export default function RecebimentosSprint2() {
+type Props = {
+  onAtualizar?: () => void | Promise<void>;
+};
+
+export default function RecebimentosSprint2({ onAtualizar }: Props) {
   const [doacoes, setDoacoes] = useState<Doacao[]>([]);
   const [itens, setItens] = useState<Item[]>([]);
   const [mensagem, setMensagem] = useState("");
@@ -47,7 +51,11 @@ export default function RecebimentosSprint2() {
         }
       } catch (erro) {
         if (ativo) {
-          setMensagem(String(erro));
+          setMensagem(
+            erro instanceof Error
+              ? erro.message
+              : "Erro ao carregar os recebimentos."
+          );
         }
       }
     }
@@ -60,30 +68,48 @@ export default function RecebimentosSprint2() {
   }, []);
 
   async function confirmarRecebimento(idDoacao: number) {
-    try {
-      setMensagem("");
-      setCarregando(true);
+    setMensagem("");
+    setCarregando(true);
 
+    try {
       await api(`/estoque/receber/${idDoacao}`, {
         method: "POST"
       });
 
-      await carregar();
-      setMensagem("Doacao recebida com sucesso.");
+      setMensagem("Doação recebida com sucesso.");
+
+      try {
+        await carregar();
+        await onAtualizar?.();
+      } catch {
+        setMensagem(
+          "Doação recebida com sucesso, mas não foi possível atualizar todos os dados. Clique em Atualizar."
+        );
+      }
     } catch (erro) {
-      setMensagem(String(erro));
+      setMensagem(
+        erro instanceof Error
+          ? erro.message
+          : "Erro ao confirmar o recebimento."
+      );
     } finally {
       setCarregando(false);
     }
   }
 
   async function atualizar() {
+    setMensagem("");
+    setCarregando(true);
+
     try {
-      setMensagem("");
-      setCarregando(true);
       await carregar();
+      await onAtualizar?.();
     } catch (erro) {
-      setMensagem(String(erro));
+      setMensagem(
+        erro instanceof Error
+          ? erro.message
+          : "Erro ao atualizar os dados."
+      );
     } finally {
       setCarregando(false);
     }
@@ -93,14 +119,14 @@ export default function RecebimentosSprint2() {
     <section className="painel">
       <h3>Recebimentos</h3>
 
-      <p role="status">{mensagem}</p>
+      {mensagem && <p role="status">{mensagem}</p>}
 
       <button
         type="button"
         onClick={() => void atualizar()}
         disabled={carregando}
       >
-        Atualizar
+        {carregando ? "Aguarde..." : "Atualizar"}
       </button>
 
       <table>
@@ -109,7 +135,7 @@ export default function RecebimentosSprint2() {
             <th>ID</th>
             <th>Doador</th>
             <th>Status</th>
-            <th>Acao</th>
+            <th>Ação</th>
           </tr>
         </thead>
 
@@ -138,13 +164,21 @@ export default function RecebimentosSprint2() {
         </tbody>
       </table>
 
+      {doacoes.length === 0 && (
+        <p>Nenhuma doação encontrada.</p>
+      )}
+
       <h3>Estoque persistido</h3>
 
-      {itens.map((item) => (
-        <p key={item.id_item}>
-          {item.nome}: {item.saldo} {item.unidade_medida}
-        </p>
-      ))}
+      {itens.length === 0 ? (
+        <p>Nenhum item encontrado no estoque.</p>
+      ) : (
+        itens.map((item) => (
+          <p key={item.id_item}>
+            {item.nome}: {item.saldo} {item.unidade_medida}
+          </p>
+        ))
+      )}
     </section>
   );
 }

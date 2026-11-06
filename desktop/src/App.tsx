@@ -1,5 +1,5 @@
 
-import { useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import RecebimentosSprint2 from "./components/Recebimentos";
 import SaidasEstoque from "./components/SaidasEstoque";
 import HistoricoMovimentacoes from "./components/HistoricoMovimentacoes";
@@ -9,6 +9,12 @@ import "./App.css";
 
 type Tela = "recebimentos" | "estoque" | "movimentacoes" | "usuarios";
 type Perfil = "FUNCIONARIO" | "ADMINISTRADOR";
+
+type ResumoEstoque = {
+  aguardando_recebimento: number;
+  recebidas_hoje: number;
+  itens_estoque_baixo: number;
+};
 
 const informacoes = {
   recebimentos: {
@@ -33,13 +39,44 @@ function App() {
   const [tela, setTela] = useState<Tela>("recebimentos");
   const [logado, setLogado] = useState(false);
   const [perfil, setPerfil] = useState<Perfil | null>(null);
+
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [carregando, setCarregando] = useState(false);
 
+  const [resumo, setResumo] = useState<ResumoEstoque | null>(null);
+  const [erroResumo, setErroResumo] = useState("");
+  const [carregandoResumo, setCarregandoResumo] = useState(false);
+
+  const carregarResumo = useCallback(async () => {
+    setCarregandoResumo(true);
+
+    try {
+      const dados: ResumoEstoque = await api("/estoque/resumo");
+
+      setResumo(dados);
+      setErroResumo("");
+    } catch (erro) {
+      setErroResumo(
+        erro instanceof Error
+          ? erro.message
+          : "Erro ao carregar os indicadores."
+      );
+    } finally {
+      setCarregandoResumo(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (logado && tela === "recebimentos") {
+      void carregarResumo();
+    }
+  }, [logado, tela, carregarResumo]);
+
   async function entrar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
+
     setMensagem("");
     setCarregando(true);
 
@@ -49,7 +86,7 @@ function App() {
         body: JSON.stringify({ email, senha })
       });
 
-      const perfilUsuario = resposta.usuario.perfil;
+      const perfilUsuario: Perfil = resposta.usuario.perfil;
 
       if (
         perfilUsuario !== "FUNCIONARIO" &&
@@ -61,13 +98,19 @@ function App() {
       }
 
       sessionStorage.setItem("doefacil_token", resposta.token);
+
       setPerfil(perfilUsuario);
       setLogado(true);
       setTela("recebimentos");
+
+      setResumo(null);
+      setErroResumo("");
       setSenha("");
     } catch (erro) {
       setMensagem(
-        erro instanceof Error ? erro.message : "Erro ao entrar."
+        erro instanceof Error
+          ? erro.message
+          : "Erro ao entrar."
       );
     } finally {
       setCarregando(false);
@@ -76,12 +119,18 @@ function App() {
 
   function sair() {
     sessionStorage.removeItem("doefacil_token");
+
     setLogado(false);
     setPerfil(null);
     setTela("recebimentos");
+
     setEmail("");
     setSenha("");
     setMensagem("");
+
+    setResumo(null);
+    setErroResumo("");
+    setCarregandoResumo(false);
   }
 
   const pagina = informacoes[tela];
@@ -157,12 +206,16 @@ function App() {
         {!logado ? (
           <section className="painel" style={{ marginTop: 28 }}>
             <h3>Acesso ao sistema</h3>
-            <p>Entre com uma conta de funcionário ou administrador.</p>
+
+            <p>
+              Entre com uma conta de funcionário ou administrador.
+            </p>
 
             <form onSubmit={(evento) => void entrar(evento)}>
               <p>
                 <label htmlFor="email">E-mail</label>
               </p>
+
               <input
                 id="email"
                 type="email"
@@ -174,6 +227,7 @@ function App() {
               <p>
                 <label htmlFor="senha">Senha</label>
               </p>
+
               <input
                 id="senha"
                 type="password"
@@ -198,22 +252,41 @@ function App() {
                 <section className="resumo">
                   <article>
                     <span>Aguardando recebimento</span>
-                    <strong>-</strong>
+
+                    <strong>
+                      {resumo?.aguardando_recebimento ?? "-"}
+                    </strong>
                   </article>
 
                   <article>
                     <span>Recebidas hoje</span>
-                    <strong>-</strong>
+
+                    <strong>
+                      {resumo?.recebidas_hoje ?? "-"}
+                    </strong>
                   </article>
 
                   <article className="alerta">
                     <span>Itens com estoque baixo</span>
-                    <strong>-</strong>
+
+                    <strong>
+                      {resumo?.itens_estoque_baixo ?? "-"}
+                    </strong>
                   </article>
                 </section>
 
+                {carregandoResumo && (
+                  <p role="status">Atualizando indicadores...</p>
+                )}
+
+                {erroResumo && (
+                  <p role="alert">{erroResumo}</p>
+                )}
+
                 <div className="grade">
-                  <RecebimentosSprint2 />
+                  <RecebimentosSprint2
+                    onAtualizar={carregarResumo}
+                  />
                 </div>
               </>
             )}
@@ -230,11 +303,12 @@ function App() {
               </div>
             )}
 
-            {tela === "usuarios" && perfil === "ADMINISTRADOR" && (
-              <div style={{ marginTop: 28 }}>
-                <GerenciamentoUsuarios />
-              </div>
-            )}
+            {tela === "usuarios" &&
+              perfil === "ADMINISTRADOR" && (
+                <div style={{ marginTop: 28 }}>
+                  <GerenciamentoUsuarios />
+                </div>
+              )}
           </>
         )}
       </main>
