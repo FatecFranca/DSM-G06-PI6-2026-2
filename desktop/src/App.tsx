@@ -1,8 +1,79 @@
 
-import RecebimentosSprint2 from "./components/RecebimentosSprint2";
+import { useState, type FormEvent } from "react";
+import RecebimentosSprint2 from "./components/Recebimentos";
+import SaidasEstoque from "./components/SaidasEstoque";
+import { api } from "./services/api";
 import "./App.css";
 
+type Tela = "recebimentos" | "estoque" | "movimentacoes";
+
+const informacoes = {
+  recebimentos: {
+    titulo: "Recebimento de doações",
+    descricao: "Confirme as doações entregues na instituição."
+  },
+  estoque: {
+    titulo: "Controle de estoque",
+    descricao: "Consulte os saldos e registre saídas de itens."
+  },
+  movimentacoes: {
+    titulo: "Histórico de movimentações",
+    descricao: "Consulte as entradas e saídas do estoque."
+  }
+};
+
 function App() {
+  const [tela, setTela] = useState<Tela>("recebimentos");
+  const [logado, setLogado] = useState(false);
+  const [email, setEmail] = useState("");
+  const [senha, setSenha] = useState("");
+  const [mensagem, setMensagem] = useState("");
+  const [carregando, setCarregando] = useState(false);
+
+  async function entrar(evento: FormEvent<HTMLFormElement>) {
+    evento.preventDefault();
+    setMensagem("");
+    setCarregando(true);
+
+    try {
+      const resposta = await api("/auth/login", {
+        method: "POST",
+        body: JSON.stringify({ email, senha })
+      });
+
+      if (
+        !["FUNCIONARIO", "ADMINISTRADOR"].includes(
+          resposta.usuario.perfil
+        )
+      ) {
+        throw new Error(
+          "Acesso permitido apenas para funcionários e administradores."
+        );
+      }
+
+      sessionStorage.setItem("doefacil_token", resposta.token);
+      setLogado(true);
+      setSenha("");
+    } catch (erro) {
+      setMensagem(
+        erro instanceof Error ? erro.message : "Erro ao entrar."
+      );
+    } finally {
+      setCarregando(false);
+    }
+  }
+
+  function sair() {
+    sessionStorage.removeItem("doefacil_token");
+    setLogado(false);
+    setTela("recebimentos");
+    setEmail("");
+    setSenha("");
+    setMensagem("");
+  }
+
+  const pagina = informacoes[tela];
+
   return (
     <div className="aplicacao">
       <aside className="menu-lateral">
@@ -10,49 +81,138 @@ function App() {
         <p>Controle interno</p>
 
         <nav>
-          <button className="selecionado">
+          <button
+            type="button"
+            className={tela === "recebimentos" ? "selecionado" : ""}
+            onClick={() => setTela("recebimentos")}
+            disabled={!logado}
+          >
             Recebimentos
           </button>
-          <button disabled>Estoque</button>
-          <button disabled>Movimentações</button>
-          <button disabled>Campanhas</button>
+
+          <button
+            type="button"
+            className={tela === "estoque" ? "selecionado" : ""}
+            onClick={() => setTela("estoque")}
+            disabled={!logado}
+          >
+            Estoque
+          </button>
+
+          <button
+            type="button"
+            className={tela === "movimentacoes" ? "selecionado" : ""}
+            onClick={() => setTela("movimentacoes")}
+            disabled={!logado}
+          >
+            Movimentações
+          </button>
+
+          <button type="button" disabled>
+            Campanhas
+          </button>
         </nav>
       </aside>
 
       <main className="area-principal">
         <header>
           <div>
-            <h2>Recebimento de doações</h2>
-            <p>
-              Confirme as doações entregues na instituição.
-            </p>
+            <h2>{pagina.titulo}</h2>
+            <p>{pagina.descricao}</p>
           </div>
 
-          <button className="botao-entrada" disabled>
-            Registrar entrada
-          </button>
+          {logado && (
+            <button
+              type="button"
+              className="botao-entrada"
+              onClick={sair}
+            >
+              Sair
+            </button>
+          )}
         </header>
 
-        <section className="resumo">
-          <article>
-            <span>Aguardando recebimento</span>
-            <strong>-</strong>
-          </article>
+        {!logado ? (
+          <section className="painel" style={{ marginTop: 28 }}>
+            <h3>Acesso ao sistema</h3>
+            <p>Entre com uma conta de funcionário ou administrador.</p>
 
-          <article>
-            <span>Recebidas hoje</span>
-            <strong>-</strong>
-          </article>
+            <form onSubmit={(evento) => void entrar(evento)}>
+              <p>
+                <label htmlFor="email">E-mail</label>
+              </p>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(evento) => setEmail(evento.target.value)}
+                required
+              />
 
-          <article className="alerta">
-            <span>Itens com estoque baixo</span>
-            <strong>-</strong>
-          </article>
-        </section>
+              <p>
+                <label htmlFor="senha">Senha</label>
+              </p>
+              <input
+                id="senha"
+                type="password"
+                value={senha}
+                onChange={(evento) => setSenha(evento.target.value)}
+                required
+              />
 
-        <div className="grade">
-          <RecebimentosSprint2 />
-        </div>
+              <p>
+                <button type="submit" disabled={carregando}>
+                  {carregando ? "Entrando..." : "Entrar"}
+                </button>
+              </p>
+            </form>
+
+            <p role="status">{mensagem}</p>
+          </section>
+        ) : (
+          <>
+            {tela === "recebimentos" && (
+              <>
+                <section className="resumo">
+                  <article>
+                    <span>Aguardando recebimento</span>
+                    <strong>-</strong>
+                  </article>
+
+                  <article>
+                    <span>Recebidas hoje</span>
+                    <strong>-</strong>
+                  </article>
+
+                  <article className="alerta">
+                    <span>Itens com estoque baixo</span>
+                    <strong>-</strong>
+                  </article>
+                </section>
+
+                <div className="grade">
+                  <RecebimentosSprint2 />
+                </div>
+              </>
+            )}
+
+            {tela === "estoque" && (
+                <div style={{ marginTop: 28 }}>
+                <SaidasEstoque />
+                </div>
+                )}
+
+            {tela === "movimentacoes" && (
+              <section className="painel" style={{ marginTop: 28 }}>
+                <h3>Histórico de movimentações</h3>
+                <p>
+                  A consulta de entradas e saídas será
+                  disponibilizada nesta tela.
+                </p>
+              </section>
+            )}
+          </>
+        )}
       </main>
     </div>
   );
