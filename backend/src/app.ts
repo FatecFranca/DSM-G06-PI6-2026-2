@@ -6,6 +6,8 @@ import auth from "./routes/auth";
 import campanhas from "./routes/campanhas";
 import doacoes from "./routes/doacoes";
 import estoque from "./routes/estoque";
+import movimentacoes from "./routes/movimentacoes";
+
 const app = express();
 const origens = (process.env.CORS_ORIGINS ||
   "http://localhost:5173,http://localhost:4173").split(",");
@@ -25,6 +27,7 @@ app.use("/api/auth", auth);
 app.use("/api/campanhas", campanhas);
 app.use("/api/doacoes", doacoes);
 app.use("/api/estoque", estoque);
+app.use("/api/movimentacoes", movimentacoes);
 app.use((_req, res) => res.status(404).json({ mensagem: "Rota nao encontrada" }));
 const erros: ErrorRequestHandler = (erro, _req, res, _next) => {
   const status = erro.status ||
