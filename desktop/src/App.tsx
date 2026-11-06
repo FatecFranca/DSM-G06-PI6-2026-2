@@ -3,10 +3,12 @@ import { useState, type FormEvent } from "react";
 import RecebimentosSprint2 from "./components/Recebimentos";
 import SaidasEstoque from "./components/SaidasEstoque";
 import HistoricoMovimentacoes from "./components/HistoricoMovimentacoes";
+import GerenciamentoUsuarios from "./components/GerenciamentoUsuarios";
 import { api } from "./services/api";
 import "./App.css";
 
-type Tela = "recebimentos" | "estoque" | "movimentacoes";
+type Tela = "recebimentos" | "estoque" | "movimentacoes" | "usuarios";
+type Perfil = "FUNCIONARIO" | "ADMINISTRADOR";
 
 const informacoes = {
   recebimentos: {
@@ -20,12 +22,17 @@ const informacoes = {
   movimentacoes: {
     titulo: "Histórico de movimentações",
     descricao: "Consulte as entradas e saídas do estoque."
+  },
+  usuarios: {
+    titulo: "Gerenciamento de usuários",
+    descricao: "Consulte e cadastre funcionários e administradores."
   }
 };
 
 function App() {
   const [tela, setTela] = useState<Tela>("recebimentos");
   const [logado, setLogado] = useState(false);
+  const [perfil, setPerfil] = useState<Perfil | null>(null);
   const [email, setEmail] = useState("");
   const [senha, setSenha] = useState("");
   const [mensagem, setMensagem] = useState("");
@@ -42,10 +49,11 @@ function App() {
         body: JSON.stringify({ email, senha })
       });
 
+      const perfilUsuario = resposta.usuario.perfil;
+
       if (
-        !["FUNCIONARIO", "ADMINISTRADOR"].includes(
-          resposta.usuario.perfil
-        )
+        perfilUsuario !== "FUNCIONARIO" &&
+        perfilUsuario !== "ADMINISTRADOR"
       ) {
         throw new Error(
           "Acesso permitido apenas para funcionários e administradores."
@@ -53,7 +61,9 @@ function App() {
       }
 
       sessionStorage.setItem("doefacil_token", resposta.token);
+      setPerfil(perfilUsuario);
       setLogado(true);
+      setTela("recebimentos");
       setSenha("");
     } catch (erro) {
       setMensagem(
@@ -67,6 +77,7 @@ function App() {
   function sair() {
     sessionStorage.removeItem("doefacil_token");
     setLogado(false);
+    setPerfil(null);
     setTela("recebimentos");
     setEmail("");
     setSenha("");
@@ -108,6 +119,16 @@ function App() {
           >
             Movimentações
           </button>
+
+          {logado && perfil === "ADMINISTRADOR" && (
+            <button
+              type="button"
+              className={tela === "usuarios" ? "selecionado" : ""}
+              onClick={() => setTela("usuarios")}
+            >
+              Usuários
+            </button>
+          )}
 
           <button type="button" disabled>
             Campanhas
@@ -198,16 +219,22 @@ function App() {
             )}
 
             {tela === "estoque" && (
-                <div style={{ marginTop: 28 }}>
+              <div style={{ marginTop: 28 }}>
                 <SaidasEstoque />
-                </div>
-                )}
+              </div>
+            )}
 
             {tela === "movimentacoes" && (
               <div style={{ marginTop: 28 }}>
                 <HistoricoMovimentacoes />
-               </div>
-              )}         
+              </div>
+            )}
+
+            {tela === "usuarios" && perfil === "ADMINISTRADOR" && (
+              <div style={{ marginTop: 28 }}>
+                <GerenciamentoUsuarios />
+              </div>
+            )}
           </>
         )}
       </main>

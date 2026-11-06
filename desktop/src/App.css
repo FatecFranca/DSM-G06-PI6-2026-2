@@ -197,3 +197,85 @@ td {
   padding: 11px;
   width: 100%;
 }
+
+/* Gerenciamento de usuários */
+
+.usuarios-conteudo {
+  display: grid;
+  grid-template-columns: minmax(280px, 350px) minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.usuarios-cadastro form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.usuarios-cadastro label {
+  color: #37443b;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 8px;
+}
+
+.usuarios-cadastro input,
+.usuarios-cadastro select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5ce;
+  border-radius: 7px;
+  padding: 11px;
+  font: inherit;
+  background: white;
+  color: #263238;
+}
+
+.usuarios-cadastro form button {
+  margin-top: 14px;
+}
+
+.usuarios-cadastro > p {
+  color: #68766d;
+  font-size: 14px;
+}
+
+.usuarios-cabecalho {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.usuarios-cabecalho h3 {
+  margin: 0;
+}
+
+.usuarios-atualizar {
+  border: 1px solid #2e7d32;
+  border-radius: 7px;
+  background: white;
+  color: #2e7d32;
+  cursor: pointer;
+  padding: 9px 14px;
+}
+
+.usuarios-tabela {
+  overflow-x: auto;
+}
+
+.usuarios-sucesso {
+  color: #2e7d32 !important;
+}
+
+.usuarios-erro {
+  color: #b42318 !important;
+}
+
+@media (max-width: 1050px) {
+  .usuarios-conteudo {
+    grid-template-columns: 1fr;
+  }
+}
