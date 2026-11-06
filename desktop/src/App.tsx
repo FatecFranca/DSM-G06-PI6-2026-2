@@ -2,6 +2,7 @@
 import { useState, type FormEvent } from "react";
 import RecebimentosSprint2 from "./components/Recebimentos";
 import SaidasEstoque from "./components/SaidasEstoque";
+import HistoricoMovimentacoes from "./components/HistoricoMovimentacoes";
 import { api } from "./services/api";
 import "./App.css";
 
@@ -203,14 +204,10 @@ function App() {
                 )}
 
             {tela === "movimentacoes" && (
-              <section className="painel" style={{ marginTop: 28 }}>
-                <h3>Histórico de movimentações</h3>
-                <p>
-                  A consulta de entradas e saídas será
-                  disponibilizada nesta tela.
-                </p>
-              </section>
-            )}
+              <div style={{ marginTop: 28 }}>
+                <HistoricoMovimentacoes />
+               </div>
+              )}         
           </>
         )}
       </main>
