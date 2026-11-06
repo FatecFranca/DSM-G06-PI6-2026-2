@@ -1,13 +1,22 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
+
 import RecebimentosSprint2 from "./components/Recebimentos";
 import SaidasEstoque from "./components/SaidasEstoque";
 import HistoricoMovimentacoes from "./components/HistoricoMovimentacoes";
 import GerenciamentoUsuarios from "./components/GerenciamentoUsuarios";
+import Campanhas from "./components/Campanhas";
+
 import { api } from "./services/api";
 import "./App.css";
 
-type Tela = "recebimentos" | "estoque" | "movimentacoes" | "usuarios";
+type Tela =
+  | "recebimentos"
+  | "estoque"
+  | "movimentacoes"
+  | "usuarios"
+  | "campanhas";
+
 type Perfil = "FUNCIONARIO" | "ADMINISTRADOR";
 
 type ResumoEstoque = {
@@ -32,6 +41,10 @@ const informacoes = {
   usuarios: {
     titulo: "Gerenciamento de usuários",
     descricao: "Consulte e cadastre funcionários e administradores."
+  },
+  campanhas: {
+    titulo: "Campanhas",
+    descricao: "Consulte e gerencie as campanhas da instituição."
   }
 };
 
@@ -49,11 +62,13 @@ function App() {
   const [erroResumo, setErroResumo] = useState("");
   const [carregandoResumo, setCarregandoResumo] = useState(false);
 
+  // Consulta os indicadores reais do backend.
   const carregarResumo = useCallback(async () => {
     setCarregandoResumo(true);
 
     try {
       const dados: ResumoEstoque = await api("/estoque/resumo");
+
       setResumo(dados);
       setErroResumo("");
     } catch (erro) {
@@ -67,12 +82,14 @@ function App() {
     }
   }, []);
 
+  // Atualiza os indicadores ao acessar Recebimentos.
   useEffect(() => {
     if (logado && tela === "recebimentos") {
       void carregarResumo();
     }
   }, [logado, tela, carregarResumo]);
 
+  // Autenticação do funcionário ou administrador.
   async function entrar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
 
@@ -144,6 +161,7 @@ function App() {
     }
   }
 
+  // Encerra a sessão e limpa os dados do usuário.
   function sair() {
     sessionStorage.removeItem("doefacil_token");
 
@@ -164,6 +182,7 @@ function App() {
 
   return (
     <div className="aplicacao">
+      {/* Menu lateral */}
       <aside className="menu-lateral">
         <h1>DoeFácil</h1>
         <p>Controle interno</p>
@@ -206,12 +225,18 @@ function App() {
             </button>
           )}
 
-          <button type="button" disabled>
+          <button
+            type="button"
+            className={tela === "campanhas" ? "selecionado" : ""}
+            onClick={() => setTela("campanhas")}
+            disabled={!logado}
+          >
             Campanhas
           </button>
         </nav>
       </aside>
 
+      {/* Conteúdo principal */}
       <main className="area-principal">
         <header>
           <div>
@@ -231,10 +256,13 @@ function App() {
         </header>
 
         {!logado ? (
+          // Tela de login.
           <section className="painel" style={{ marginTop: 28 }}>
             <h3>Acesso ao sistema</h3>
 
-            <p>Entre com uma conta de funcionário ou administrador.</p>
+            <p>
+              Entre com uma conta de funcionário ou administrador.
+            </p>
 
             <form
               noValidate
@@ -279,6 +307,7 @@ function App() {
           </section>
         ) : (
           <>
+            {/* Recebimentos e indicadores */}
             {tela === "recebimentos" && (
               <>
                 <section className="resumo">
@@ -313,29 +342,41 @@ function App() {
                 )}
 
                 <div className="grade">
-                  <RecebimentosSprint2 onAtualizar={carregarResumo} />
+                  <RecebimentosSprint2
+                    onAtualizar={carregarResumo}
+                  />
                 </div>
               </>
             )}
 
+            {/* Controle de estoque */}
             {tela === "estoque" && (
               <div style={{ marginTop: 28 }}>
                 <SaidasEstoque />
               </div>
             )}
 
+            {/* Histórico de movimentações */}
             {tela === "movimentacoes" && (
               <div style={{ marginTop: 28 }}>
                 <HistoricoMovimentacoes />
               </div>
             )}
 
+            {/* Gerenciamento de usuários */}
             {tela === "usuarios" &&
               perfil === "ADMINISTRADOR" && (
                 <div style={{ marginTop: 28 }}>
                   <GerenciamentoUsuarios />
                 </div>
               )}
+
+            {/* Gerenciamento de campanhas */}
+            {tela === "campanhas" && perfil && (
+              <div style={{ marginTop: 28 }}>
+                <Campanhas perfil={perfil} />
+              </div>
+            )}
           </>
         )}
       </main>
