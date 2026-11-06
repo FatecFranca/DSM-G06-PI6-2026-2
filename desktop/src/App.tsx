@@ -54,7 +54,6 @@ function App() {
 
     try {
       const dados: ResumoEstoque = await api("/estoque/resumo");
-
       setResumo(dados);
       setErroResumo("");
     } catch (erro) {
@@ -77,13 +76,31 @@ function App() {
   async function entrar(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
 
+    if (carregando) return;
+
     setMensagem("");
+
+    const emailInformado = email.trim().toLowerCase();
+
+    if (
+      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailInformado) ||
+      emailInformado.length > 150 ||
+      senha.length < 8 ||
+      new TextEncoder().encode(senha).length > 72
+    ) {
+      setMensagem("E-mail ou senha incorretos.");
+      return;
+    }
+
     setCarregando(true);
 
     try {
       const resposta = await api("/auth/login", {
         method: "POST",
-        body: JSON.stringify({ email, senha })
+        body: JSON.stringify({
+          email: emailInformado,
+          senha
+        })
       });
 
       const perfilUsuario: Perfil = resposta.usuario.perfil;
@@ -92,9 +109,8 @@ function App() {
         perfilUsuario !== "FUNCIONARIO" &&
         perfilUsuario !== "ADMINISTRADOR"
       ) {
-        throw new Error(
-          "Acesso permitido apenas para funcionários e administradores."
-        );
+        setMensagem("Acesso não autorizado para este perfil.");
+        return;
       }
 
       sessionStorage.setItem("doefacil_token", resposta.token);
@@ -106,12 +122,23 @@ function App() {
       setResumo(null);
       setErroResumo("");
       setSenha("");
+      setMensagem("");
     } catch (erro) {
-      setMensagem(
-        erro instanceof Error
-          ? erro.message
-          : "Erro ao entrar."
-      );
+      if (erro instanceof TypeError) {
+        setMensagem("Não foi possível conectar ao servidor.");
+      } else if (
+        erro instanceof Error &&
+        (
+          erro.message === "E-mail ou senha incorretos." ||
+          erro.message === "Informe um e-mail válido." ||
+          erro.message === "Use pelo menos 8 caracteres na senha." ||
+          erro.message === "A senha é muito longa. Use uma senha menor."
+        )
+      ) {
+        setMensagem("E-mail ou senha incorretos.");
+      } else {
+        setMensagem("Não foi possível realizar o login. Tente novamente.");
+      }
     } finally {
       setCarregando(false);
     }
@@ -207,11 +234,12 @@ function App() {
           <section className="painel" style={{ marginTop: 28 }}>
             <h3>Acesso ao sistema</h3>
 
-            <p>
-              Entre com uma conta de funcionário ou administrador.
-            </p>
+            <p>Entre com uma conta de funcionário ou administrador.</p>
 
-            <form onSubmit={(evento) => void entrar(evento)}>
+            <form
+              noValidate
+              onSubmit={(evento) => void entrar(evento)}
+            >
               <p>
                 <label htmlFor="email">E-mail</label>
               </p>
@@ -221,6 +249,7 @@ function App() {
                 type="email"
                 value={email}
                 onChange={(evento) => setEmail(evento.target.value)}
+                autoComplete="username"
                 required
               />
 
@@ -233,6 +262,7 @@ function App() {
                 type="password"
                 value={senha}
                 onChange={(evento) => setSenha(evento.target.value)}
+                autoComplete="current-password"
                 required
               />
 
@@ -243,7 +273,9 @@ function App() {
               </p>
             </form>
 
-            <p role="status">{mensagem}</p>
+            {mensagem && (
+              <p role="alert">{mensagem}</p>
+            )}
           </section>
         ) : (
           <>
@@ -252,7 +284,6 @@ function App() {
                 <section className="resumo">
                   <article>
                     <span>Aguardando recebimento</span>
-
                     <strong>
                       {resumo?.aguardando_recebimento ?? "-"}
                     </strong>
@@ -260,7 +291,6 @@ function App() {
 
                   <article>
                     <span>Recebidas hoje</span>
-
                     <strong>
                       {resumo?.recebidas_hoje ?? "-"}
                     </strong>
@@ -268,7 +298,6 @@ function App() {
 
                   <article className="alerta">
                     <span>Itens com estoque baixo</span>
-
                     <strong>
                       {resumo?.itens_estoque_baixo ?? "-"}
                     </strong>
@@ -284,9 +313,7 @@ function App() {
                 )}
 
                 <div className="grade">
-                  <RecebimentosSprint2
-                    onAtualizar={carregarResumo}
-                  />
+                  <RecebimentosSprint2 onAtualizar={carregarResumo} />
                 </div>
               </>
             )}

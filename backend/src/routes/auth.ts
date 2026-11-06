@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { sign } from "jsonwebtoken";
@@ -13,13 +14,16 @@ type Usuario = {
   perfil: string;
 };
 
+const MENSAGEM_LOGIN = "E-mail ou senha incorretos.";
+
 function validarEmail(valor: unknown) {
   const email = typeof valor === "string"
     ? valor.trim().toLowerCase()
     : "";
 
   exigir(
-    email.length <= 150 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+    email.length <= 150 &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
     "Informe um e-mail válido."
   );
 
@@ -42,8 +46,10 @@ function validarSenha(valor: unknown) {
   return senha;
 }
 
+// Cadastro público: cria somente usuários DOADOR.
 rotas.post("/cadastro", async (req, res) => {
   const corpo = req.body ?? {};
+
   const nome = typeof corpo.nome === "string"
     ? corpo.nome.trim()
     : "";
@@ -74,14 +80,37 @@ rotas.post("/cadastro", async (req, res) => {
   res.status(201).json({ usuario: rows[0] });
 });
 
+// Login com resposta padronizada para credenciais inválidas.
 rotas.post("/login", async (req, res) => {
   const corpo = req.body ?? {};
-  const email = validarEmail(corpo.email);
-  const senha = validarSenha(corpo.senha);
 
-  const { rows } = await db.query<Usuario & { senha_hash: string }>(
+  const email = typeof corpo.email === "string"
+    ? corpo.email.trim().toLowerCase()
+    : "";
+
+  const senha = typeof corpo.senha === "string"
+    ? corpo.senha
+    : "";
+
+  const credenciaisValidas =
+    email.length > 0 &&
+    email.length <= 150 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+    senha.length >= 8 &&
+    Buffer.byteLength(senha, "utf8") <= 72;
+
+  exigir(
+    credenciaisValidas,
+    MENSAGEM_LOGIN,
+    401
+  );
+
+  const { rows } = await db.query<
+    Usuario & { senha_hash: string }
+  >(
     `SELECT id_usuario, nome, email, perfil, senha_hash
-     FROM usuario WHERE email = $1`,
+     FROM usuario
+     WHERE email = $1`,
     [email]
   );
 
@@ -91,7 +120,11 @@ rotas.post("/login", async (req, res) => {
     ? await bcrypt.compare(senha, usuario.senha_hash)
     : false;
 
-  exigir(senhaCorreta, "E-mail ou senha incorretos.", 401);
+  exigir(
+    senhaCorreta,
+    MENSAGEM_LOGIN,
+    401
+  );
 
   const chave = process.env.JWT_SECRET;
 
@@ -102,12 +135,16 @@ rotas.post("/login", async (req, res) => {
     );
   }
 
-  const token = sign({ perfil: usuario.perfil }, chave, {
-    algorithm: "HS256",
-    issuer: "doefacil",
-    subject: String(usuario.id_usuario),
-    expiresIn: "1h"
-  });
+  const token = sign(
+    { perfil: usuario.perfil },
+    chave,
+    {
+      algorithm: "HS256",
+      issuer: "doefacil",
+      subject: String(usuario.id_usuario),
+      expiresIn: "1h"
+    }
+  );
 
   res.json({
     token,
