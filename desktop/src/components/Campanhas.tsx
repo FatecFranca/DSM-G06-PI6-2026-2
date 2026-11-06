@@ -36,8 +36,7 @@ const formularioInicial: Formulario = {
 function formatarData(valor: string | null) {
   if (!valor) return "Não definida";
 
-  const data = valor.slice(0, 10);
-  const partes = data.split("-");
+  const partes = valor.slice(0, 10).split("-");
 
   if (partes.length !== 3) return valor;
 
@@ -53,9 +52,9 @@ function Campanhas({ perfil }: Props) {
 
   const [mostrarFormulario, setMostrarFormulario] = useState(false);
   const [idEdicao, setIdEdicao] = useState<number | null>(null);
-  const [formulario, setFormulario] = useState<Formulario>(
-    formularioInicial
-  );
+  const [formulario, setFormulario] = useState<Formulario>({
+    ...formularioInicial
+  });
 
   const administrador = perfil === "ADMINISTRADOR";
 
@@ -222,45 +221,54 @@ function Campanhas({ perfil }: Props) {
   }
 
   return (
-    <section className="painel">
-      <h3>Campanhas cadastradas</h3>
+    <section className="painel campanhas-conteudo">
+      <div className="campanhas-cabecalho">
+        <div>
+          <h3>Campanhas cadastradas</h3>
+          <p>
+            Consulte as campanhas e acompanhe seus períodos e situações.
+          </p>
+        </div>
 
-      <p>
-        Consulte as campanhas e acompanhe seus períodos e situações.
-      </p>
-
-      <div
-        style={{
-          display: "flex",
-          gap: 12,
-          flexWrap: "wrap",
-          marginBottom: 20
-        }}
-      >
-        <button
-          type="button"
-          onClick={() => void carregarCampanhas()}
-          disabled={carregando || salvando}
-        >
-          {carregando ? "Atualizando..." : "Atualizar"}
-        </button>
-
-        {administrador && (
+        <div className="campanhas-acoes">
           <button
             type="button"
-            onClick={novaCampanha}
-            disabled={salvando}
+            className="campanhas-botao-secundario"
+            onClick={() => void carregarCampanhas()}
+            disabled={carregando || salvando}
           >
-            Nova campanha
+            {carregando ? "Atualizando..." : "Atualizar"}
           </button>
-        )}
+
+          {administrador && (
+            <button
+              type="button"
+              onClick={novaCampanha}
+              disabled={salvando}
+            >
+              Nova campanha
+            </button>
+          )}
+        </div>
       </div>
 
-      {mensagem && <p role="status">{mensagem}</p>}
-      {erro && <p role="alert">{erro}</p>}
+      {mensagem && (
+        <p className="campanhas-sucesso" role="status">
+          {mensagem}
+        </p>
+      )}
+
+      {erro && (
+        <p className="campanhas-erro" role="alert">
+          {erro}
+        </p>
+      )}
 
       {administrador && mostrarFormulario && (
-        <form onSubmit={(evento) => void salvar(evento)}>
+        <form
+          className="campanhas-formulario"
+          onSubmit={(evento) => void salvar(evento)}
+        >
           <h3>
             {idEdicao === null
               ? "Cadastrar campanha"
@@ -269,92 +277,87 @@ function Campanhas({ perfil }: Props) {
 
           <p>
             <label htmlFor="campanha-titulo">Título</label>
+            <input
+              id="campanha-titulo"
+              type="text"
+              value={formulario.titulo}
+              onChange={(evento) =>
+                atualizarCampo("titulo", evento.target.value)
+              }
+              minLength={3}
+              maxLength={120}
+              required
+            />
           </p>
-
-          <input
-            id="campanha-titulo"
-            type="text"
-            value={formulario.titulo}
-            onChange={(evento) =>
-              atualizarCampo("titulo", evento.target.value)
-            }
-            minLength={3}
-            maxLength={120}
-            required
-          />
 
           <p>
-            <label htmlFor="campanha-descricao">Descrição</label>
+            <label htmlFor="campanha-descricao">
+              Descrição
+            </label>
+            <textarea
+              id="campanha-descricao"
+              value={formulario.descricao}
+              onChange={(evento) =>
+                atualizarCampo("descricao", evento.target.value)
+              }
+              rows={4}
+            />
           </p>
-
-          <textarea
-            id="campanha-descricao"
-            value={formulario.descricao}
-            onChange={(evento) =>
-              atualizarCampo("descricao", evento.target.value)
-            }
-            rows={4}
-          />
 
           <p>
-            <label htmlFor="campanha-inicio">Data de início</label>
+            <label htmlFor="campanha-inicio">
+              Data de início
+            </label>
+            <input
+              id="campanha-inicio"
+              type="date"
+              value={formulario.data_inicio}
+              onChange={(evento) =>
+                atualizarCampo("data_inicio", evento.target.value)
+              }
+              required
+            />
           </p>
-
-          <input
-            id="campanha-inicio"
-            type="date"
-            value={formulario.data_inicio}
-            onChange={(evento) =>
-              atualizarCampo("data_inicio", evento.target.value)
-            }
-            required
-          />
 
           <p>
             <label htmlFor="campanha-fim">
               Data de término (opcional)
             </label>
+            <input
+              id="campanha-fim"
+              type="date"
+              value={formulario.data_fim}
+              min={formulario.data_inicio || undefined}
+              onChange={(evento) =>
+                atualizarCampo("data_fim", evento.target.value)
+              }
+            />
           </p>
-
-          <input
-            id="campanha-fim"
-            type="date"
-            value={formulario.data_fim}
-            min={formulario.data_inicio || undefined}
-            onChange={(evento) =>
-              atualizarCampo("data_fim", evento.target.value)
-            }
-          />
 
           <p>
-            <label htmlFor="campanha-status">Situação</label>
+            <label htmlFor="campanha-status">
+              Situação
+            </label>
+            <select
+              id="campanha-status"
+              value={formulario.status}
+              onChange={(evento) =>
+                atualizarCampo("status", evento.target.value)
+              }
+            >
+              <option value="ATIVA">Ativa</option>
+              <option value="ENCERRADA">Encerrada</option>
+            </select>
           </p>
 
-          <select
-            id="campanha-status"
-            value={formulario.status}
-            onChange={(evento) =>
-              atualizarCampo("status", evento.target.value)
-            }
-          >
-            <option value="ATIVA">Ativa</option>
-            <option value="ENCERRADA">Encerrada</option>
-          </select>
-
-          <div
-            style={{
-              display: "flex",
-              gap: 12,
-              marginTop: 20,
-              flexWrap: "wrap"
-            }}
-          >
+          <div className="campanhas-acoes">
             <button type="submit" disabled={salvando}>
               {salvando ? "Salvando..." : "Salvar"}
             </button>
 
             <button
               type="button"
+              className="campanhas-botao-secundario"
               onClick={fecharFormulario}
               disabled={salvando}
             >
@@ -369,62 +372,64 @@ function Campanhas({ perfil }: Props) {
       ) : campanhas.length === 0 ? (
         <p>Nenhuma campanha cadastrada.</p>
       ) : (
-        <div style={{ overflowX: "auto", marginTop: 20 }}>
-          <table
-            style={{
-              width: "100%",
-              borderCollapse: "collapse",
-              textAlign: "left"
-            }}
-          >
+        <div className="campanhas-tabela">
+          <table>
             <thead>
               <tr>
-                <th style={{ padding: 10 }}>Campanha</th>
-                <th style={{ padding: 10 }}>Início</th>
-                <th style={{ padding: 10 }}>Término</th>
-                <th style={{ padding: 10 }}>Situação</th>
-                {administrador && (
-                  <th style={{ padding: 10 }}>Ações</th>
-                )}
+                <th>Campanha</th>
+                <th>Início</th>
+                <th>Término</th>
+                <th>Situação</th>
+                {administrador && <th>Ações</th>}
               </tr>
             </thead>
 
             <tbody>
               {campanhas.map((campanha) => (
                 <tr key={campanha.id_campanha}>
-                  <td style={{ padding: 10 }}>
-                    <strong>{campanha.titulo}</strong>
+                  <td>
+                    <span className="campanhas-titulo">
+                      {campanha.titulo}
+                    </span>
+
                     {campanha.descricao && (
-                      <p>{campanha.descricao}</p>
+                      <p className="campanhas-descricao">
+                        {campanha.descricao}
+                      </p>
                     )}
                   </td>
 
-                  <td style={{ padding: 10 }}>
+                  <td>
                     {formatarData(campanha.data_inicio)}
                   </td>
 
-                  <td style={{ padding: 10 }}>
+                  <td>
                     {formatarData(campanha.data_fim)}
                   </td>
 
-                  <td style={{ padding: 10 }}>
-                    {campanha.status === "ATIVA"
-                      ? "Ativa"
-                      : "Encerrada"}
+                  <td>
+                    <span
+                      className={
+                        campanha.status === "ATIVA"
+                          ? "campanhas-status ativa"
+                          : "campanhas-status encerrada"
+                      }
+                    >
+                      {campanha.status === "ATIVA"
+                        ? "Ativa"
+                        : "Encerrada"}
+                    </span>
                   </td>
 
                   {administrador && (
-                    <td style={{ padding: 10 }}>
-                      <div
-                        style={{
-                          display: "flex",
-                          gap: 8,
-                          flexWrap: "wrap"
-                        }}
-                      >
+                    <td>
+                      <div className="campanhas-acoes">
                         <button
                           type="button"
-                          onClick={() => editarCampanha(campanha)}
+                          className="campanhas-botao-secundario"
+                          onClick={() =>
+                            editarCampanha(campanha)
+                          }
                           disabled={salvando}
                         >
                           Editar
@@ -432,6 +437,7 @@ function Campanhas({ perfil }: Props) {
 
                         <button
                           type="button"
+                          className="campanhas-botao-perigo"
                           onClick={() =>
                             void cancelarCampanha(campanha)
                           }
