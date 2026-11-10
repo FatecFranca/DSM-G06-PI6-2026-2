@@ -97,7 +97,7 @@ app.use((_req, res) => {
 // Tratamento centralizado de erros
 const erros: ErrorRequestHandler = (
   erro,
-  _req,
+  req,
   res,
   _next
 ) => {
@@ -109,6 +109,18 @@ const erros: ErrorRequestHandler = (
         ? 400
         : 500);
 
+  // Registrar erros internos nos logs do servidor
+  if (status >= 500) {
+    console.error("[ERRO API]", {
+      metodo: req.method,
+      rota: req.originalUrl,
+      status,
+      codigo: erro.code,
+      mensagem: erro.message
+    });
+  }
+
+  // Retornar uma resposta segura para o cliente
   res.status(status).json({
     mensagem:
       status < 500
