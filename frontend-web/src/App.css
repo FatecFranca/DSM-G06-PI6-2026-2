@@ -259,3 +259,27 @@ td {
   vertical-align: top;
   overflow-wrap: anywhere;
 }
+
+.cabecalho-painel {
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.acesso-web {
+  margin-bottom: 20px;
+}
+
+.botao-sair {
+  padding: 10px 14px;
+  border: 1px solid #2e7d32;
+  border-radius: 8px;
+  color: #1f5f32;
+  background: white;
+  cursor: pointer;
+}
+
+.campos-doacao {
+  border: 0;
+  padding: 0;
+  min-inline-size: 0;
+}

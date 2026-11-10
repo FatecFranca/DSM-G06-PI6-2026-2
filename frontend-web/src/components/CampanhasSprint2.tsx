@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { api, ErroApi } from "../services/api";
 
 type Campanha = {
@@ -10,7 +10,12 @@ type Campanha = {
   status: string;
 };
 
-export default function CampanhasSprint2() {
+type Props = {
+  administrador: boolean;
+  aoExpirar: (mensagem: string) => void;
+};
+
+export default function CampanhasSprint2({ administrador, aoExpirar }: Props) {
   const prefixo = useId();
 
   const [lista, setLista] = useState<Campanha[]>([]);
@@ -18,10 +23,6 @@ export default function CampanhasSprint2() {
   const [sucesso, setSucesso] = useState("");
   const [carregando, setCarregando] = useState(true);
   const [enviando, setEnviando] = useState(false);
-
-  const [email, setEmail] = useState("");
-  const [senha, setSenha] = useState("");
-  const [logado, setLogado] = useState(false);
 
   const [id, setId] = useState<number | null>(null);
   const [titulo, setTitulo] = useState("");
@@ -44,7 +45,7 @@ export default function CampanhasSprint2() {
     setStatus("ATIVA");
   }
 
-  async function carregar(signal?: AbortSignal) {
+  const carregar = useCallback(async (signal?: AbortSignal) => {
     const dados = await api("/campanhas", { signal });
 
     if (!Array.isArray(dados)) {
@@ -54,19 +55,18 @@ export default function CampanhasSprint2() {
     if (montado.current && !signal?.aborted) {
       setLista(dados);
     }
-  }
+  }, []);
 
-  function mostrarErro(falha: unknown) {
+  const mostrarErro = useCallback((falha: unknown) => {
     if (falha instanceof ErroApi && falha.status === 401) {
-      setLogado(false);
-      setSenha("");
-      limparFormulario();
+      aoExpirar(falha.message);
+      return;
     }
 
     setErro(
       falha instanceof Error ? falha.message : "Tente novamente."
     );
-  }
+  }, [aoExpirar]);
 
   useEffect(() => {
     montado.current = true;
@@ -88,7 +88,7 @@ export default function CampanhasSprint2() {
       montado.current = false;
       controlador.abort();
     };
-  }, []);
+  }, [carregar, mostrarErro]);
 
   async function executar(acao: () => Promise<void>) {
     if (emAndamento.current || carregando) return;
@@ -111,35 +111,6 @@ export default function CampanhasSprint2() {
         setEnviando(false);
       }
     }
-  }
-
-  async function login() {
-    const resposta = await api("/auth/login", {
-      method: "POST",
-      body: JSON.stringify({
-        email: email.trim().toLowerCase(),
-        senha
-      })
-    });
-
-    if (resposta.usuario.perfil !== "ADMINISTRADOR") {
-      throw new Error("Use uma conta de administrador.");
-    }
-
-    sessionStorage.setItem("doefacil_token", resposta.token);
-
-    setLogado(true);
-    setSenha("");
-    setSucesso("Você entrou como administrador.");
-  }
-
-  function sair() {
-    sessionStorage.removeItem("doefacil_token");
-    setLogado(false);
-    setSenha("");
-    limparFormulario();
-    setErro("");
-    setSucesso("");
   }
 
   async function recarregarAposSalvar(mensagem: string) {
@@ -281,170 +252,116 @@ export default function CampanhasSprint2() {
         <p role="status">Carregando campanhas…</p>
       ) : null}
 
-      {!logado ? (
+      {administrador && (
         <form
           className="formulario-campanha"
           onSubmit={(evento) => {
             evento.preventDefault();
-            void executar(login);
+            void executar(salvar);
           }}
         >
-          <h4>Acesso do administrador</h4>
+          <h4>
+            {id === null
+              ? "Nova campanha"
+              : `Editar campanha #${id}`}
+          </h4>
 
-          <label htmlFor={`${prefixo}-email`}>E-mail</label>
+          <label htmlFor={`${prefixo}-titulo`}>
+            Título
+          </label>
 
           <input
-            id={`${prefixo}-email`}
-            type="email"
-            autoComplete="username"
-            value={email}
+            id={`${prefixo}-titulo`}
+            value={titulo}
+            minLength={3}
+            maxLength={120}
             onChange={(evento) =>
-              setEmail(evento.target.value)
+              setTitulo(evento.target.value)
             }
             disabled={ocupado}
             required
           />
 
-          <label htmlFor={`${prefixo}-senha`}>Senha</label>
+          <label htmlFor={`${prefixo}-descricao`}>
+            Descrição (opcional)
+          </label>
+
+          <textarea
+            id={`${prefixo}-descricao`}
+            value={descricao}
+            onChange={(evento) =>
+              setDescricao(evento.target.value)
+            }
+            disabled={ocupado}
+            rows={3}
+          />
+
+          <label htmlFor={`${prefixo}-inicio`}>
+            Início
+          </label>
 
           <input
-            id={`${prefixo}-senha`}
-            type="password"
-            autoComplete="current-password"
-            value={senha}
+            id={`${prefixo}-inicio`}
+            type="date"
+            value={inicio}
             onChange={(evento) =>
-              setSenha(evento.target.value)
+              setInicio(evento.target.value)
             }
             disabled={ocupado}
             required
           />
 
-          <button disabled={ocupado}>
-            {enviando
-              ? "Aguarde…"
-              : "Entrar como administrador"}
-          </button>
-        </form>
-      ) : (
-        <>
-          <button
-            type="button"
+          <label htmlFor={`${prefixo}-fim`}>
+            Fim (opcional)
+          </label>
+
+          <input
+            id={`${prefixo}-fim`}
+            type="date"
+            min={inicio || undefined}
+            value={fim}
+            onChange={(evento) =>
+              setFim(evento.target.value)
+            }
             disabled={ocupado}
-            onClick={sair}
+          />
+
+          <label htmlFor={`${prefixo}-status`}>
+            Situação
+          </label>
+
+          <select
+            id={`${prefixo}-status`}
+            value={status}
+            onChange={(evento) =>
+              setStatus(evento.target.value)
+            }
+            disabled={ocupado}
           >
-            Sair
-          </button>
+            <option value="ATIVA">Ativa</option>
+            <option value="ENCERRADA">Encerrada</option>
+          </select>
 
-          <form
-            className="formulario-campanha"
-            onSubmit={(evento) => {
-              evento.preventDefault();
-              void executar(salvar);
-            }}
-          >
-            <h4>
-              {id === null
-                ? "Nova campanha"
-                : `Editar campanha #${id}`}
-            </h4>
+          <div className="acoes-campanha">
+            <button disabled={ocupado}>
+              {enviando
+                ? "Salvando…"
+                : id === null
+                  ? "Criar campanha"
+                  : "Salvar alterações"}
+            </button>
 
-            <label htmlFor={`${prefixo}-titulo`}>
-              Título
-            </label>
-
-            <input
-              id={`${prefixo}-titulo`}
-              value={titulo}
-              minLength={3}
-              maxLength={120}
-              onChange={(evento) =>
-                setTitulo(evento.target.value)
-              }
-              disabled={ocupado}
-              required
-            />
-
-            <label htmlFor={`${prefixo}-descricao`}>
-              Descrição (opcional)
-            </label>
-
-            <textarea
-              id={`${prefixo}-descricao`}
-              value={descricao}
-              onChange={(evento) =>
-                setDescricao(evento.target.value)
-              }
-              disabled={ocupado}
-              rows={3}
-            />
-
-            <label htmlFor={`${prefixo}-inicio`}>
-              Início
-            </label>
-
-            <input
-              id={`${prefixo}-inicio`}
-              type="date"
-              value={inicio}
-              onChange={(evento) =>
-                setInicio(evento.target.value)
-              }
-              disabled={ocupado}
-              required
-            />
-
-            <label htmlFor={`${prefixo}-fim`}>
-              Fim (opcional)
-            </label>
-
-            <input
-              id={`${prefixo}-fim`}
-              type="date"
-              min={inicio || undefined}
-              value={fim}
-              onChange={(evento) =>
-                setFim(evento.target.value)
-              }
-              disabled={ocupado}
-            />
-
-            <label htmlFor={`${prefixo}-status`}>
-              Situação
-            </label>
-
-            <select
-              id={`${prefixo}-status`}
-              value={status}
-              onChange={(evento) =>
-                setStatus(evento.target.value)
-              }
-              disabled={ocupado}
-            >
-              <option value="ATIVA">Ativa</option>
-              <option value="ENCERRADA">Encerrada</option>
-            </select>
-
-            <div className="acoes-campanha">
-              <button disabled={ocupado}>
-                {enviando
-                  ? "Salvando…"
-                  : id === null
-                    ? "Criar campanha"
-                    : "Salvar alterações"}
+            {id !== null ? (
+              <button
+                type="button"
+                disabled={ocupado}
+                onClick={limparFormulario}
+              >
+                Cancelar edição
               </button>
-
-              {id !== null ? (
-                <button
-                  type="button"
-                  disabled={ocupado}
-                  onClick={limparFormulario}
-                >
-                  Cancelar edição
-                </button>
-              ) : null}
-            </div>
-          </form>
-        </>
+            ) : null}
+          </div>
+        </form>
       )}
 
       {!carregando && !erro && lista.length === 0 ? (
@@ -483,7 +400,7 @@ export default function CampanhasSprint2() {
                 </td>
 
                 <td>
-                  {logado ? (
+                  {administrador ? (
                     <div className="acoes-campanha">
                       <button
                         type="button"
