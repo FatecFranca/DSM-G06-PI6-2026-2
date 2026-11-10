@@ -8,8 +8,8 @@ Projeto Interdisciplinar do 6º semestre de Desenvolvimento de Software Multipla
 
 | Perfil | Interface | O que pode fazer |
 | --- | --- | --- |
-| Doador | Web e mobile | Consultar campanhas ativas, cadastrar doações com ou sem campanha e acompanhar o status das próprias doações |
-| Doador | Mobile | Criar uma conta, editar ou cancelar doações que aguardam recebimento |
+| Doador | Web e mobile | Consultar campanhas ativas, cadastrar doações com ou sem campanha, acompanhar o status e editar ou cancelar doações que aguardam recebimento |
+| Doador | Mobile | Criar uma conta |
 | Funcionário | Desktop | Confirmar recebimentos, consultar o saldo, registrar saídas e acompanhar o histórico de movimentações |
 | Administrador | Web e desktop | Gerenciar campanhas no web, operar recebimentos e estoque no desktop e gerenciar usuários |
 
