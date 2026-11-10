@@ -1,6 +1,6 @@
 # DoeFácil — Painel web
 
-O painel web é usado pela administração da instituição para cadastrar, editar e acompanhar campanhas de doação.
+O painel web permite que a administração gerencie campanhas e que doadores cadastrem e acompanhem suas doações.
 
 ## Iniciar o backend
 
@@ -33,7 +33,9 @@ npm ci
 npm run dev
 ```
 
-Abra [http://localhost:5173](http://localhost:5173) e selecione **Entrar como administrador**. Se mudar o `VITE_API_URL`, reinicie o Vite. Se o Vite usar outra porta, ajuste `CORS_ORIGINS` no `backend/.env` e reinicie o backend. Para o painel na porta `5174` e o desktop na porta `4173`, use `CORS_ORIGINS=http://localhost:5174,http://localhost:4173`.
+Abra [http://localhost:5173](http://localhost:5173) e clique em **Entrar** com sua conta de administrador ou doador. O sistema abre a área correspondente ao perfil da conta. Como doador, escolha um item e informe a quantidade em **Nova doação**. Você pode vincular a doação a uma campanha ativa e acompanhar a situação em **Minhas doações**.
+
+Se mudar o `VITE_API_URL`, reinicie o Vite. Se o Vite usar outra porta, ajuste `CORS_ORIGINS` no `backend/.env` e reinicie o backend. Para o painel na porta `5174` e o desktop na porta `4173`, use `CORS_ORIGINS=http://localhost:5174,http://localhost:4173`.
 
 ## Ensaiar a demonstração da Sprint 3
 
