@@ -164,6 +164,92 @@ before(async () => {
   tokenDoador = gerarToken(idDoador, "DOADOR");
 });
 
+// TESTE NOVO: RECEBIMENTO DUPLICADO
+
+test("recebimento duplicado nao aumenta o estoque duas vezes", async () => {
+  const idItem = await criarItem(
+    "Item recebimento duplicado",
+    0
+  );
+
+  const idDoacao = await criarDoacao("CADASTRADA");
+
+  await db.query(
+    `INSERT INTO item_doacao
+       (id_doacao, id_item, quantidade)
+     VALUES ($1, $2, $3)`,
+    [idDoacao, idItem, 5]
+  );
+
+  const consultarSaldo = async () => {
+    const { rows } = await db.query(
+      `SELECT COALESCE(
+         SUM(
+           CASE
+             WHEN tipo = 'ENTRADA' THEN quantidade
+             ELSE -quantidade
+           END
+         ), 0
+       ) AS saldo
+       FROM movimentacao_estoque
+       WHERE id_item = $1`,
+      [idItem]
+    );
+
+    return Number(rows[0].saldo);
+  };
+
+  const saldoInicial = await consultarSaldo();
+
+  // Primeiro recebimento deve funcionar.
+  const primeiraResposta = await request(app)
+    .post(`/api/estoque/receber/${idDoacao}`)
+    .set("Authorization", `Bearer ${tokenFuncionario}`);
+
+  assert.equal(primeiraResposta.status, 200);
+
+  assert.equal(
+    await consultarSaldo(),
+    saldoInicial + 5
+  );
+
+  // Segundo recebimento deve ser bloqueado.
+  const segundaResposta = await request(app)
+    .post(`/api/estoque/receber/${idDoacao}`)
+    .set("Authorization", `Bearer ${tokenFuncionario}`);
+
+  assert.equal(segundaResposta.status, 409);
+
+  // O saldo nao pode aumentar novamente.
+  assert.equal(
+    await consultarSaldo(),
+    saldoInicial + 5
+  );
+
+  // A doacao deve continuar recebida.
+  const { rows } = await db.query(
+    `SELECT status
+     FROM doacao
+     WHERE id_doacao = $1`,
+    [idDoacao]
+  );
+
+  assert.equal(rows[0].status, "RECEBIDA");
+
+  // Deve existir somente uma movimentacao de entrada.
+  const movimentacoes = await db.query(
+    `SELECT COUNT(*)::integer AS total
+     FROM movimentacao_estoque
+     WHERE id_doacao = $1
+       AND tipo = 'ENTRADA'`,
+    [idDoacao]
+  );
+
+  assert.equal(movimentacoes.rows[0].total, 1);
+});
+
+// TESTES ORIGINAIS
+
 test("resumo exige autenticacao", async () => {
   const resposta = await request(app)
     .get("/api/estoque/resumo");
