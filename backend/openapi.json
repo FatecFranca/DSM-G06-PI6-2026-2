@@ -6,12 +6,12 @@
     "version": "1.0.0",
     "description": "Documentação da API do DoeFácil para gerenciamento de usuários, campanhas, doações, estoque e movimentações."
   },
-  "servers": [
-    {
-      "url": "http://localhost:3000",
-      "description": "Ambiente de desenvolvimento"
-    }
-  ],
+ "servers": [
+  {
+    "url": "/",
+    "description": "Servidor atual da API"
+  }
+],
   "tags": [
     {
       "name": "Sistema",
