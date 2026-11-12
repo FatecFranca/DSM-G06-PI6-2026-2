@@ -1,5 +1,5 @@
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { api } from "../services/api";
 
 type Item = {
@@ -15,33 +15,46 @@ export default function SaidasEstoque() {
   const [quantidade, setQuantidade] = useState("");
   const [mensagem, setMensagem] = useState("");
   const [carregando, setCarregando] = useState(false);
+  const [carregandoEstoque, setCarregandoEstoque] = useState(true);
 
   async function carregarEstoque() {
-    const dados = await api("/estoque");
+    const dados: Item[] = await api("/estoque");
     setItens(dados);
   }
 
   useEffect(() => {
     let ativo = true;
 
-    api("/estoque")
-      .then((dados: Item[]) => {
-        if (ativo) setItens(dados);
-      })
-      .catch((erro: unknown) => {
+    async function carregarInicial() {
+      try {
+        const dados: Item[] = await api("/estoque");
+
+        if (ativo) {
+          setItens(dados);
+        }
+      } catch (erro) {
         if (ativo) {
           setMensagem(
-            erro instanceof Error ? erro.message : "Erro ao consultar estoque."
+            erro instanceof Error
+              ? erro.message
+              : "Erro ao consultar estoque."
           );
         }
-      });
+      } finally {
+        if (ativo) {
+          setCarregandoEstoque(false);
+        }
+      }
+    }
+
+    void carregarInicial();
 
     return () => {
       ativo = false;
     };
   }, []);
 
-  async function registrarSaida(evento: React.FormEvent<HTMLFormElement>) {
+  async function registrarSaida(evento: FormEvent<HTMLFormElement>) {
     evento.preventDefault();
 
     const valor = Number(quantidade);
@@ -51,8 +64,13 @@ export default function SaidasEstoque() {
       return;
     }
 
-    if (Math.round(valor * 100) !== valor * 100) {
-      setMensagem("A quantidade deve ter no máximo duas casas decimais.");
+    if (
+      valor > 99999999.99 ||
+      Math.abs(valor * 100 - Math.round(valor * 100)) > 0.000001
+    ) {
+      setMensagem(
+        "Informe uma quantidade positiva com até duas casas decimais."
+      );
       return;
     }
 
@@ -68,12 +86,21 @@ export default function SaidasEstoque() {
         })
       });
 
-      await carregarEstoque();
       setQuantidade("");
       setMensagem("Saída registrada com sucesso.");
+
+      try {
+        await carregarEstoque();
+      } catch {
+        setMensagem(
+          "Saída registrada, mas não foi possível atualizar o estoque. Atualize a consulta."
+        );
+      }
     } catch (erro) {
       setMensagem(
-        erro instanceof Error ? erro.message : "Erro ao registrar saída."
+        erro instanceof Error
+          ? erro.message
+          : "Erro ao registrar saída."
       );
     } finally {
       setCarregando(false);
@@ -88,25 +115,37 @@ export default function SaidasEstoque() {
     <section className="painel">
       <h3>Estoque disponível</h3>
 
-      <table>
-        <thead>
-          <tr>
-            <th>Item</th>
-            <th>Saldo</th>
-            <th>Unidade</th>
-          </tr>
-        </thead>
+      {carregandoEstoque ? (
+        <p>Carregando estoque...</p>
+      ) : (
+        <>
+          {itens.length === 0 ? (
+            <p>Nenhum item encontrado no estoque.</p>
+          ) : (
+            <div style={{ overflowX: "auto" }}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>Item</th>
+                    <th>Saldo</th>
+                    <th>Unidade</th>
+                  </tr>
+                </thead>
 
-        <tbody>
-          {itens.map((item) => (
-            <tr key={item.id_item}>
-              <td>{item.nome}</td>
-              <td>{item.saldo}</td>
-              <td>{item.unidade_medida}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                <tbody>
+                  {itens.map((item) => (
+                    <tr key={item.id_item}>
+                      <td>{item.nome}</td>
+                      <td>{item.saldo}</td>
+                      <td>{item.unidade_medida}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
 
       <h3 style={{ marginTop: 30 }}>Registrar saída</h3>
 
@@ -118,8 +157,12 @@ export default function SaidasEstoque() {
         <select
           id="item"
           value={idItem}
-          onChange={(evento) => setIdItem(evento.target.value)}
+          onChange={(evento) => {
+            setIdItem(evento.target.value);
+            setMensagem("");
+          }}
           required
+          disabled={carregando || carregandoEstoque || itens.length === 0}
         >
           <option value="">Selecione um item</option>
 
@@ -145,24 +188,37 @@ export default function SaidasEstoque() {
           id="quantidade"
           type="number"
           min="0.01"
+          max="99999999.99"
           step="0.01"
           value={quantidade}
-          onChange={(evento) => setQuantidade(evento.target.value)}
+          onChange={(evento) => {
+            setQuantidade(evento.target.value);
+            setMensagem("");
+          }}
           required
+          disabled={carregando || carregandoEstoque || itens.length === 0}
         />
 
         <p>
           <button
             type="submit"
             className="botao-entrada"
-            disabled={carregando}
+            disabled={
+              carregando ||
+              carregandoEstoque ||
+              itens.length === 0
+            }
           >
             {carregando ? "Registrando..." : "Registrar saída"}
           </button>
         </p>
       </form>
 
-      <p role="status">{mensagem}</p>
+      {mensagem && (
+        <p role="status" aria-live="polite">
+          {mensagem}
+        </p>
+      )}
     </section>
   );
 }
