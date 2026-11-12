@@ -1,51 +1,193 @@
-# DoeFácil — Painel web
+# DoeFácil — Frontend Web
 
-O painel web permite que a administração gerencie campanhas e que doadores cadastrem e acompanhem suas doações.
+O Frontend Web do DoeFácil permite que doadores participem de campanhas de arrecadação, registrem e acompanhem suas doações. Também oferece funcionalidades administrativas para o gerenciamento das campanhas.
 
-## Iniciar o backend
+Desenvolvido com **React, TypeScript e Vite**, o painel utiliza a API REST do DoeFácil para autenticação e gerenciamento das informações.
 
-Use Node.js 24 com npm. O ensaio usa uma base PostgreSQL já preparada com o [modelo do DoeFácil](../database/modelo-logico.sql), uma conta administradora e uma conta doadora de teste.
+Este módulo faz parte do Projeto Interdisciplinar do 6º semestre de Desenvolvimento de Software Multiplataforma (DSM) da Fatec Franca — Grupo 06.
 
-1. Crie `backend/.env` com base em [`backend/.env.example`](../backend/.env.example). Use `PORT=3000`, preencha `DATABASE_URL` com a conexão da base de teste e defina um `JWT_SECRET` de pelo menos 32 caracteres. Guarde esses valores no arquivo local.
-2. Em um terminal na raiz do repositório, rode:
+## Funcionalidades
 
-   ```sh
-   cd backend
-   npm ci
-   npm run dev
-   ```
+As funcionalidades são disponibilizadas conforme o perfil do usuário autenticado.
 
-3. Mantenha o terminal aberto e acesse [`/api/health`](http://localhost:3000/api/health). A resposta esperada é `{"banco":"conectado"}`.
+| Funcionalidade | Descrição |
+| --- | --- |
+| Autenticação | Acesso ao sistema com as permissões correspondentes ao perfil do usuário. |
+| Cadastro de doadores | Criação de contas para participação nas campanhas. |
+| Consulta de campanhas | Visualização das campanhas disponíveis para doação. |
+| Gerenciamento de campanhas | Cadastro, edição e cancelamento de campanhas por administradores. |
+| Cadastro de doações | Registro de itens e quantidades, com possibilidade de vinculação a uma campanha. |
+| Minhas doações | Consulta e acompanhamento das doações realizadas. |
+| Edição de doações | Alteração de quantidades e observações antes do recebimento. |
+| Cancelamento de doações | Cancelamento de registros que ainda aguardam recebimento. |
 
-## Iniciar o painel web
+### Fluxo de doações
 
-Na pasta `frontend-web`, crie um arquivo chamado `.env` com o endereço da API local. Inclua o sufixo `/api`.
+Após realizar o login, o doador pode selecionar um item, informar a quantidade e, opcionalmente, vincular a doação a uma campanha ativa.
 
-```dotenv
-VITE_API_URL=http://localhost:3000/api
+A doação fica inicialmente com o status **Aguardando recebimento**.
+
+Enquanto estiver nessa situação, o doador pode editar as quantidades e a observação ou cancelar o registro. A edição mantém os itens e a campanha originalmente associados à doação.
+
+Quando a instituição confirma o recebimento pelo aplicativo Desktop, o status é atualizado para **Recebida**.
+
+O acompanhamento pode ser realizado pela seção **Minhas doações**.
+
+## Tecnologias utilizadas
+
+| Tecnologia | Utilização |
+| --- | --- |
+| React | Construção da interface Web. |
+| TypeScript | Desenvolvimento com tipagem estática. |
+| Vite | Ambiente de desenvolvimento e geração do build. |
+| API REST | Comunicação com o backend do DoeFácil. |
+| JWT | Autenticação e controle de acesso. |
+
+## Requisitos
+
+Para executar o painel Web, é necessário ter:
+
+- Node.js 24 e npm;
+- Navegador atualizado;
+- Acesso à internet para utilizar a API publicada;
+- Uma conta de usuário para acessar as funcionalidades autenticadas.
+
+## Configuração do ambiente
+
+Na pasta `frontend-web/`, crie ou configure o arquivo `.env`:
+
+```env
+VITE_API_URL=https://doefacil.duckdns.org/api
 ```
 
-Em outro terminal na raiz do repositório, rode:
+Essa variável define o endereço da API utilizada pelo frontend.
 
-```sh
+O arquivo `.env` contém configurações específicas do ambiente e não deve ser enviado ao repositório.
+
+Caso o endereço da API seja alterado, reinicie o servidor Vite para aplicar a nova configuração.
+
+## Executando o frontend
+
+Na raiz do repositório, acesse a pasta do frontend:
+
+```powershell
 cd frontend-web
+```
+
+Instale as dependências:
+
+```powershell
+npm ci
+```
+
+Inicie o ambiente de desenvolvimento:
+
+```powershell
+npm run dev
+```
+
+Abra no navegador:
+
+http://localhost:5173
+
+Na tela inicial, selecione **Entrar** e utilize uma conta de administrador ou doador.
+
+O sistema apresenta as funcionalidades correspondentes ao perfil autenticado.
+
+## Build e validação
+
+Para verificar o TypeScript e gerar o build do frontend:
+
+```powershell
+npm run build
+```
+
+Para executar a verificação de lint:
+
+```powershell
+npm run lint
+```
+
+Esses comandos auxiliam na identificação de problemas antes da entrega.
+
+## Backend local (opcional)
+
+O frontend também pode ser executado com uma instância local da API.
+
+Para isso, é necessário configurar o backend e utilizar uma base PostgreSQL preparada com o [modelo do DoeFácil](../database/modelo-logico.sql).
+
+Crie o arquivo `backend/.env` com base em [`backend/.env.example`](../backend/.env.example), configurando:
+
+- `PORT=3000`;
+- `DATABASE_URL` com a conexão do PostgreSQL;
+- `JWT_SECRET` com pelo menos 32 caracteres;
+- `CORS_ORIGINS` com as origens autorizadas, quando necessário.
+
+Na pasta `backend/`, execute:
+
+```powershell
 npm ci
 npm run dev
 ```
 
-Abra [http://localhost:5173](http://localhost:5173) e clique em **Entrar** com sua conta de administrador ou doador. O sistema abre a área correspondente ao perfil da conta. Como doador, escolha um item e informe a quantidade em **Nova doação**. Você pode vincular a doação a uma campanha ativa e acompanhar a situação em **Minhas doações**.
+Com o backend em execução, configure o arquivo `frontend-web/.env`:
 
-Enquanto a doação estiver **Aguardando recebimento**, use **Editar** para alterar quantidades e observação ou **Cancelar doação** para cancelar o registro. A edição mantém os itens e a campanha escolhidos no cadastro.
+```env
+VITE_API_URL=http://localhost:3000/api
+```
 
-Se mudar o `VITE_API_URL`, reinicie o Vite. Se o Vite usar outra porta, ajuste `CORS_ORIGINS` no `backend/.env` e reinicie o backend. Para o painel na porta `5174` e o desktop na porta `4173`, use `CORS_ORIGINS=http://localhost:5174,http://localhost:4173`.
+Reinicie o frontend após alterar a variável.
 
-## Ensaiar a demonstração da Sprint 3
+Para verificar a conexão com o banco de dados, acesse:
 
-Use o mesmo backend local no web, no desktop e no iPhone. Inicie o desktop com `npm ci` e `npm run dev` na pasta `desktop`. No iPhone, conecte-se ao mesmo Wi-Fi do computador. Em `mobile/.env`, defina `EXPO_PUBLIC_API_URL=http://IP_DO_COMPUTADOR:3000/api` com o IPv4 atual do computador. Na pasta `mobile`, rode `npm ci` e `npm start`, depois abra o QR code no Expo Go. Se o IP mudar, ajuste o arquivo e reinicie o Expo.
+http://localhost:3000/api/health
 
-1. **Web.** Entre como administradora, abra **Campanhas** e mostre a campanha ativa **Ensaio final — Sprint 3**. Se ela ainda não existir na base de teste, cadastre uma campanha de ensaio com período vigente.
-2. **Mobile.** Entre como doadora e cadastre uma nova doação de 2 kg de arroz vinculada à campanha. Anote o número da doação.
-3. **Desktop.** Entre com uma conta de administração ou de funcionário. Em **Recebimentos**, confira o saldo de arroz em **Estoque persistido**, localize a doação pelo número e clique em **Confirmar recebimento**. Verifique o status `RECEBIDA` e o acréscimo de 2 kg ao saldo anterior.
-4. **Mobile.** Em **Minhas doações**, toque em **Atualizar lista**. A mesma doação deve aparecer como **Recebida**, sem os botões **Editar** e **Cancelar doação**.
+Com o banco conectado, a resposta esperada é:
 
-Para mostrar a API publicada, abra `/api/health` e `/api/campanhas` no domínio exibido no Elastic Beanstalk. Faça o login e o fluxo de doação no ambiente local.
+```json
+{
+  "banco": "conectado"
+}
+```
+
+Caso o frontend utilize outra porta, configure a origem correspondente em `CORS_ORIGINS` e reinicie o backend.
+
+Por exemplo, para o frontend na porta 5174 e o Desktop na porta 4173:
+
+```env
+CORS_ORIGINS=http://localhost:5174,http://localhost:4173
+```
+
+As instruções gerais de configuração do ambiente também estão disponíveis no [README principal](../README.md).
+
+## Integração com o sistema
+
+O Frontend Web utiliza a mesma API REST acessada pelas aplicações Mobile e Desktop.
+
+A API centraliza a autenticação, as regras de negócio e as operações realizadas no banco de dados PostgreSQL.
+
+O frontend não acessa diretamente o banco de dados. As consultas e atualizações são realizadas por meio dos endpoints disponibilizados pelo backend.
+
+A API publicada está disponível em:
+
+https://doefacil.duckdns.org
+
+A documentação dos endpoints pode ser consultada no [Swagger do DoeFácil](https://doefacil.duckdns.org/docs).
+
+## Demonstração do sistema
+
+O roteiro de demonstração integrada do DoeFácil, envolvendo as aplicações Web, Mobile e Desktop, está disponível no [README principal](../README.md).
+
+O roteiro apresenta o fluxo desde o cadastro de uma campanha e de uma doação até a confirmação do recebimento e a atualização do estoque.
+
+## Documentação complementar
+
+- [README principal do DoeFácil](../README.md)
+- [Backend](../backend/)
+- [Desktop](../desktop/README.md)
+- [Mobile](../mobile/README.md)
+- [Documentação Swagger](https://doefacil.duckdns.org/docs)
+
+---
+
+**DoeFácil — Projeto Interdisciplinar | DSM — Fatec Franca | 2026/2 | Grupo 06**
