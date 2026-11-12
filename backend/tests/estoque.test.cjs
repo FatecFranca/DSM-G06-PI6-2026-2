@@ -14,10 +14,13 @@ const identificador = randomUUID();
 
 let idFuncionario;
 let idDoador;
+let idAdministrador;
 let idCategoria;
 let idItem;
+
 let tokenFuncionario;
 let tokenDoador;
+let tokenAdministrador;
 
 function gerarToken(idUsuario, perfil) {
   return jwt.sign(
@@ -94,8 +97,18 @@ before(async () => {
 
   idDoador = doador.rows[0].id_usuario;
 
+  const administrador = await db.query(
+    `INSERT INTO usuario (nome, email, senha_hash, perfil)
+     VALUES ('Administrador estoque', $1, 'teste-sem-login', 'ADMINISTRADOR')
+     RETURNING id_usuario`,
+    [`admin-${identificador}@doefacil.test`]
+  );
+
+  idAdministrador = administrador.rows[0].id_usuario;
+
   tokenFuncionario = gerarToken(idFuncionario, "FUNCIONARIO");
   tokenDoador = gerarToken(idDoador, "DOADOR");
+  tokenAdministrador = gerarToken(idAdministrador, "ADMINISTRADOR");
 
   await db.query(
     `INSERT INTO movimentacao_estoque
@@ -138,6 +151,24 @@ test("saida com quantidade negativa retorna 400", async () => {
     .send({ id_item: idItem, quantidade: -2 });
 
   assert.equal(resposta.status, 400);
+});
+
+test("saida com mais de duas casas decimais retorna 400", async () => {
+  const resposta = await request(app)
+    .post("/api/estoque/saidas")
+    .set("Authorization", `Bearer ${tokenFuncionario}`)
+    .send({ id_item: idItem, quantidade: 1.234 });
+
+  assert.equal(resposta.status, 400);
+});
+
+test("saida de item inexistente retorna 404", async () => {
+  const resposta = await request(app)
+    .post("/api/estoque/saidas")
+    .set("Authorization", `Bearer ${tokenFuncionario}`)
+    .send({ id_item: 2147483647, quantidade: 1 });
+
+  assert.equal(resposta.status, 404);
 });
 
 test("saida valida registra movimentacao e reduz saldo", async () => {
@@ -188,6 +219,35 @@ test("saidas simultaneas nao permitem estoque negativo", async () => {
   assert.equal(await consultarSaldo(), 2);
 });
 
+test("administrador pode registrar saida de estoque", async () => {
+  const saldoAnterior = await consultarSaldo();
+
+  const resposta = await request(app)
+    .post("/api/estoque/saidas")
+    .set("Authorization", `Bearer ${tokenAdministrador}`)
+    .send({ id_item: idItem, quantidade: 1 });
+
+  assert.equal(resposta.status, 201);
+  assert.equal(resposta.body.movimentacao.tipo, "SAIDA");
+  assert.equal(Number(resposta.body.movimentacao.id_funcionario), idAdministrador);
+  assert.equal(await consultarSaldo(), saldoAnterior - 1);
+});
+
+test("saida com saldo exato deixa estoque zerado", async () => {
+  const saldoAnterior = await consultarSaldo();
+
+  assert.ok(saldoAnterior > 0);
+
+  const resposta = await request(app)
+    .post("/api/estoque/saidas")
+    .set("Authorization", `Bearer ${tokenFuncionario}`)
+    .send({ id_item: idItem, quantidade: saldoAnterior });
+
+  assert.equal(resposta.status, 201);
+  assert.equal(Number(resposta.body.movimentacao.quantidade), saldoAnterior);
+  assert.equal(await consultarSaldo(), 0);
+});
+
 after(async () => {
   try {
     if (idItem) {
@@ -209,10 +269,16 @@ after(async () => {
       );
     }
 
-    if (idFuncionario || idDoador) {
+    const usuarios = [
+      idFuncionario,
+      idDoador,
+      idAdministrador
+    ].filter(Boolean);
+
+    if (usuarios.length > 0) {
       await db.query(
         "DELETE FROM usuario WHERE id_usuario = ANY($1::int[])",
-        [[idFuncionario, idDoador].filter(Boolean)]
+        [usuarios]
       );
     }
   } finally {
