@@ -1,0 +1,2 @@
+backend/.platform/**/*.sh text eol=lf
+backend/.platform/**/*.conf text eol=lf
