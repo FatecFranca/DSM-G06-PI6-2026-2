@@ -31,7 +31,7 @@ rotas.get("/", async (req, res) => {
        i.unidade_medida,
        m.tipo,
        m.quantidade,
-       m.data_movimentacao,
+       m.data_movimentacao AT TIME ZONE 'UTC' AS data_movimentacao,
        m.id_funcionario,
        u.nome AS nome_funcionario,
        m.id_doacao

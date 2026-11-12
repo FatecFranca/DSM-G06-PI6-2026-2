@@ -20,6 +20,26 @@ type Item = {
   nome: string;
 };
 
+// Formata a data no horário oficial de São Paulo.
+function formatarData(data: string) {
+  const dataConvertida = new Date(data);
+
+  if (Number.isNaN(dataConvertida.getTime())) {
+    return "Data inválida";
+  }
+
+  return dataConvertida.toLocaleString("pt-BR", {
+    timeZone: "America/Sao_Paulo",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false
+  });
+}
+
 export default function HistoricoMovimentacoes() {
   const [movimentacoes, setMovimentacoes] = useState<Movimentacao[]>([]);
   const [itens, setItens] = useState<Item[]>([]);
@@ -27,10 +47,14 @@ export default function HistoricoMovimentacoes() {
   const [mensagem, setMensagem] = useState("");
   const [carregando, setCarregando] = useState(false);
 
+  // Carrega as movimentações e os itens ao abrir a tela.
   useEffect(() => {
     let ativo = true;
 
     async function carregarInicial() {
+      setCarregando(true);
+      setMensagem("");
+
       try {
         const [listaMovimentacoes, listaItens] = await Promise.all([
           api("/movimentacoes"),
@@ -49,6 +73,10 @@ export default function HistoricoMovimentacoes() {
               : "Erro ao carregar movimentações."
           );
         }
+      } finally {
+        if (ativo) {
+          setCarregando(false);
+        }
       }
     }
 
@@ -59,6 +87,7 @@ export default function HistoricoMovimentacoes() {
     };
   }, []);
 
+  // Atualiza o histórico, aplicando o filtro selecionado.
   async function carregar(filtro = idItem) {
     setCarregando(true);
     setMensagem("");
@@ -68,7 +97,8 @@ export default function HistoricoMovimentacoes() {
         ? `/movimentacoes?id_item=${encodeURIComponent(filtro)}`
         : "/movimentacoes";
 
-      const dados = await api(caminho);
+      const dados: Movimentacao[] = await api(caminho);
+
       setMovimentacoes(dados);
     } catch (erro) {
       setMensagem(
@@ -81,30 +111,48 @@ export default function HistoricoMovimentacoes() {
     }
   }
 
-  function formatarData(data: string) {
-    return new Date(data).toLocaleString("pt-BR");
+  function alterarFiltro(valor: string) {
+    setIdItem(valor);
+    void carregar(valor);
   }
 
   return (
     <section className="painel">
       <h3>Histórico de movimentações</h3>
 
-      <div style={{ marginBottom: 24 }}>
-        <label htmlFor="filtro-item">Filtrar por item: </label>
+      <p>
+        Consulte as entradas e saídas registradas no estoque.
+      </p>
+
+      {/* Filtro de movimentações */}
+      <div
+        style={{
+          display: "flex",
+          alignItems: "center",
+          flexWrap: "wrap",
+          gap: 12,
+          marginBottom: 24
+        }}
+      >
+        <label htmlFor="filtro-item">
+          Filtrar por item:
+        </label>
 
         <select
           id="filtro-item"
           value={idItem}
-          onChange={(evento) => {
-            const valor = evento.target.value;
-            setIdItem(valor);
-            void carregar(valor);
-          }}
+          onChange={(evento) =>
+            alterarFiltro(evento.target.value)
+          }
+          disabled={carregando}
         >
           <option value="">Todos os itens</option>
 
           {itens.map((item) => (
-            <option key={item.id_item} value={item.id_item}>
+            <option
+              key={item.id_item}
+              value={item.id_item}
+            >
               {item.nome}
             </option>
           ))}
@@ -114,56 +162,79 @@ export default function HistoricoMovimentacoes() {
           type="button"
           onClick={() => void carregar()}
           disabled={carregando}
-          style={{ marginLeft: 12 }}
         >
           {carregando ? "Atualizando..." : "Atualizar"}
         </button>
       </div>
 
-      <p role="status">{mensagem}</p>
-
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Data</th>
-            <th>Item</th>
-            <th>Tipo</th>
-            <th>Quantidade</th>
-            <th>Responsável</th>
-          </tr>
-        </thead>
-
-        <tbody>
-          {movimentacoes.map((movimentacao) => (
-            <tr key={movimentacao.id_movimentacao}>
-              <td>{movimentacao.id_movimentacao}</td>
-              <td>{formatarData(movimentacao.data_movimentacao)}</td>
-              <td>{movimentacao.nome_item}</td>
-              <td>
-                <span
-                  className={
-                    movimentacao.tipo === "ENTRADA"
-                      ? "situacao recebida"
-                      : "situacao aguardando"
-                  }
-                >
-                  {movimentacao.tipo}
-                </span>
-              </td>
-              <td>
-                {movimentacao.quantidade}{" "}
-                {movimentacao.unidade_medida}
-              </td>
-              <td>{movimentacao.nome_funcionario}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-
-      {!carregando && movimentacoes.length === 0 && (
-        <p>Nenhuma movimentação encontrada.</p>
+      {/* Mensagens de erro */}
+      {mensagem && (
+        <p role="alert">{mensagem}</p>
       )}
+
+      {/* Tabela de movimentações */}
+      <div style={{ overflowX: "auto" }}>
+        <table>
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Data</th>
+              <th>Item</th>
+              <th>Tipo</th>
+              <th>Quantidade</th>
+              <th>Responsável</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {movimentacoes.map((movimentacao) => (
+              <tr key={movimentacao.id_movimentacao}>
+                <td>
+                  {movimentacao.id_movimentacao}
+                </td>
+
+                <td>
+                  {formatarData(
+                    movimentacao.data_movimentacao
+                  )}
+                </td>
+
+                <td>
+                  {movimentacao.nome_item}
+                </td>
+
+                <td>
+                  <span
+                    className={
+                      movimentacao.tipo === "ENTRADA"
+                        ? "situacao recebida"
+                        : "situacao aguardando"
+                    }
+                  >
+                    {movimentacao.tipo}
+                  </span>
+                </td>
+
+                <td>
+                  {movimentacao.quantidade}{" "}
+                  {movimentacao.unidade_medida}
+                </td>
+
+                <td>
+                  {movimentacao.nome_funcionario}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Histórico vazio */}
+      {!carregando &&
+        movimentacoes.length === 0 &&
+        !mensagem && (
+          <p>Nenhuma movimentação encontrada.</p>
+        )}
     </section>
   );
 }

@@ -8,6 +8,78 @@ const rotas = Router();
 
 rotas.use(proteger("FUNCIONARIO", "ADMINISTRADOR"));
 
+// Consultar indicadores reais do estoque
+rotas.get("/resumo", async (_req, res) => {
+  const [pendentes, recebidasHoje, estoqueBaixo] = await Promise.all([
+    // Contar doacoes que ainda aguardam recebimento
+    db.query(`
+      SELECT COUNT(*)::integer AS total
+      FROM doacao
+      WHERE status = 'CADASTRADA'
+    `),
+
+    // Contar doacoes recebidas hoje, considerando o horario de Brasilia
+    // A coluna data_movimentacao armazena horarios UTC sem fuso.
+    db.query(`
+      WITH periodo AS (
+        SELECT
+          (
+            (
+              CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo'
+            )::date::timestamp
+            AT TIME ZONE 'America/Sao_Paulo'
+          ) AT TIME ZONE 'UTC' AS inicio_utc,
+
+          (
+            (
+              (
+                CURRENT_TIMESTAMP AT TIME ZONE 'America/Sao_Paulo'
+              )::date + 1
+            )::timestamp
+            AT TIME ZONE 'America/Sao_Paulo'
+          ) AT TIME ZONE 'UTC' AS fim_utc
+      )
+      SELECT COUNT(DISTINCT m.id_doacao)::integer AS total
+      FROM movimentacao_estoque m
+      CROSS JOIN periodo p
+      WHERE m.tipo = 'ENTRADA'
+        AND m.id_doacao IS NOT NULL
+        AND m.data_movimentacao >= p.inicio_utc
+        AND m.data_movimentacao < p.fim_utc
+    `),
+
+    // Contar itens com saldo abaixo do estoque minimo
+    db.query(`
+      SELECT COUNT(*)::integer AS total
+      FROM (
+        SELECT
+          i.id_item,
+          i.estoque_minimo,
+          COALESCE(
+            SUM(
+              CASE
+                WHEN m.tipo = 'ENTRADA' THEN m.quantidade
+                ELSE -m.quantidade
+              END
+            ), 0
+          ) AS saldo
+        FROM item i
+        LEFT JOIN movimentacao_estoque m
+          ON m.id_item = i.id_item
+        GROUP BY i.id_item, i.estoque_minimo
+      ) AS estoque
+      WHERE estoque.estoque_minimo > 0
+        AND estoque.saldo < estoque.estoque_minimo
+    `)
+  ]);
+
+  res.json({
+    aguardando_recebimento: pendentes.rows[0].total,
+    recebidas_hoje: recebidasHoje.rows[0].total,
+    itens_estoque_baixo: estoqueBaixo.rows[0].total
+  });
+});
+
 // Consultar saldo de todos os itens
 rotas.get("/", async (_req, res) => {
   const { rows } = await db.query(`
@@ -33,7 +105,7 @@ rotas.get("/", async (_req, res) => {
   res.json(rows);
 });
 
-// Confirmar recebimento de doação
+// Confirmar recebimento de doacao
 rotas.post("/receber/:id", async (req, res) => {
   const id = idValido(req.params.id);
   const cliente = await db.connect();
@@ -42,12 +114,18 @@ rotas.post("/receber/:id", async (req, res) => {
     await cliente.query("BEGIN");
 
     const d = await cliente.query(
-      `SELECT * FROM doacao
-       WHERE id_doacao = $1 FOR UPDATE`,
+      `SELECT *
+       FROM doacao
+       WHERE id_doacao = $1
+       FOR UPDATE`,
       [id]
     );
 
-    exigir(d.rows.length > 0, "Doacao nao encontrada", 404);
+    exigir(
+      d.rows.length > 0,
+      "Doacao nao encontrada",
+      404
+    );
 
     exigir(
       d.rows[0].status === "CADASTRADA",
@@ -59,20 +137,28 @@ rotas.post("/receber/:id", async (req, res) => {
       `INSERT INTO movimentacao_estoque
         (id_item, id_funcionario, id_doacao, tipo, quantidade)
        SELECT
-         id_item, $1, id_doacao, 'ENTRADA', quantidade
+         id_item,
+         $1,
+         id_doacao,
+         'ENTRADA',
+         quantidade
        FROM item_doacao
        WHERE id_doacao = $2`,
       [res.locals.usuario.id_usuario, id]
     );
 
     await cliente.query(
-      "UPDATE doacao SET status = 'RECEBIDA' WHERE id_doacao = $1",
+      `UPDATE doacao
+       SET status = 'RECEBIDA'
+       WHERE id_doacao = $1`,
       [id]
     );
 
     await cliente.query("COMMIT");
 
-    res.json({ mensagem: "Doacao recebida" });
+    res.json({
+      mensagem: "Doacao recebida"
+    });
   } catch (erro) {
     await cliente.query("ROLLBACK");
     throw erro;
@@ -81,7 +167,7 @@ rotas.post("/receber/:id", async (req, res) => {
   }
 });
 
-// Registrar saída de estoque
+// Registrar saida de estoque
 rotas.post("/saidas", async (req, res) => {
   const idItem = idValido(req.body?.id_item);
   const quantidade = req.body?.quantidade;
@@ -103,8 +189,8 @@ rotas.post("/saidas", async (req, res) => {
   try {
     await cliente.query("BEGIN");
 
-    // Bloqueia o item para evitar saídas simultâneas
-    // que ultrapassem o saldo disponível.
+    // Bloquear o item para evitar saidas simultaneas
+    // que ultrapassem o saldo disponivel
     const item = await cliente.query(
       `SELECT id_item
        FROM item
@@ -119,7 +205,7 @@ rotas.post("/saidas", async (req, res) => {
       404
     );
 
-    // Calcula o saldo atual do item
+    // Calcular o saldo atual do item
     const saldo = await cliente.query(
       `SELECT
          COALESCE(
@@ -143,7 +229,7 @@ rotas.post("/saidas", async (req, res) => {
       409
     );
 
-    // Registra a saída no histórico de movimentações
+    // Registrar a saida no historico
     const resultado = await cliente.query(
       `INSERT INTO movimentacao_estoque
         (id_item, id_funcionario, tipo, quantidade)

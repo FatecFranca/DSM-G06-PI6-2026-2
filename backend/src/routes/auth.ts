@@ -1,3 +1,4 @@
+
 import { Router } from "express";
 import bcrypt from "bcryptjs";
 import { sign } from "jsonwebtoken";
@@ -13,21 +14,33 @@ type Usuario = {
   perfil: string;
 };
 
+type UsuarioLogin = Usuario & {
+  senha_hash: string;
+  ativo: boolean;
+};
+
+const MENSAGEM_LOGIN = "E-mail ou senha incorretos.";
+
 function validarEmail(valor: unknown) {
-  const email = typeof valor === "string"
-    ? valor.trim().toLowerCase()
-    : "";
+  const email =
+    typeof valor === "string"
+      ? valor.trim().toLowerCase()
+      : "";
 
   exigir(
-    email.length <= 150 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
-    "Informe um e-mail válido."
+    email.length <= 150 &&
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email),
+    "Informe um e-mail valido."
   );
 
   return email;
 }
 
 function validarSenha(valor: unknown) {
-  const senha = typeof valor === "string" ? valor : "";
+  const senha =
+    typeof valor === "string"
+      ? valor
+      : "";
 
   exigir(
     senha.length >= 8,
@@ -36,25 +49,29 @@ function validarSenha(valor: unknown) {
 
   exigir(
     Buffer.byteLength(senha, "utf8") <= 72,
-    "A senha é muito longa. Use uma senha menor."
+    "A senha e muito longa. Use uma senha menor."
   );
 
   return senha;
 }
 
+// Cadastro publico: cria somente usuarios DOADOR.
 rotas.post("/cadastro", async (req, res) => {
   const corpo = req.body ?? {};
-  const nome = typeof corpo.nome === "string"
-    ? corpo.nome.trim()
-    : "";
+
+  const nome =
+    typeof corpo.nome === "string"
+      ? corpo.nome.trim()
+      : "";
 
   exigir(
     nome.length > 0 && nome.length <= 100,
-    "Informe um nome com até 100 caracteres."
+    "Informe um nome com ate 100 caracteres."
   );
 
   const email = validarEmail(corpo.email);
   const senha = validarSenha(corpo.senha);
+
   const senhaHash = await bcrypt.hash(senha, 12);
 
   const { rows } = await db.query<Usuario>(
@@ -67,21 +84,52 @@ rotas.post("/cadastro", async (req, res) => {
 
   exigir(
     rows.length === 1,
-    "Este e-mail já está cadastrado.",
+    "Este e-mail ja esta cadastrado.",
     409
   );
 
-  res.status(201).json({ usuario: rows[0] });
+  res.status(201).json({
+    usuario: rows[0]
+  });
 });
 
+// Login: somente usuarios ativos podem acessar o sistema.
 rotas.post("/login", async (req, res) => {
   const corpo = req.body ?? {};
-  const email = validarEmail(corpo.email);
-  const senha = validarSenha(corpo.senha);
 
-  const { rows } = await db.query<Usuario & { senha_hash: string }>(
-    `SELECT id_usuario, nome, email, perfil, senha_hash
-     FROM usuario WHERE email = $1`,
+  const email =
+    typeof corpo.email === "string"
+      ? corpo.email.trim().toLowerCase()
+      : "";
+
+  const senha =
+    typeof corpo.senha === "string"
+      ? corpo.senha
+      : "";
+
+  const credenciaisValidas =
+    email.length > 0 &&
+    email.length <= 150 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+    senha.length >= 8 &&
+    Buffer.byteLength(senha, "utf8") <= 72;
+
+  exigir(
+    credenciaisValidas,
+    MENSAGEM_LOGIN,
+    401
+  );
+
+  const { rows } = await db.query<UsuarioLogin>(
+    `SELECT
+       id_usuario,
+       nome,
+       email,
+       perfil,
+       senha_hash,
+       ativo
+     FROM usuario
+     WHERE email = $1`,
     [email]
   );
 
@@ -91,23 +139,33 @@ rotas.post("/login", async (req, res) => {
     ? await bcrypt.compare(senha, usuario.senha_hash)
     : false;
 
-  exigir(senhaCorreta, "E-mail ou senha incorretos.", 401);
+  exigir(
+    senhaCorreta && usuario?.ativo === true,
+    MENSAGEM_LOGIN,
+    401
+  );
 
   const chave = process.env.JWT_SECRET;
 
   if (!chave || chave.length < 32) {
     throw Object.assign(
-      new Error("Autenticação não configurada."),
+      new Error("Autenticacao nao configurada."),
       { status: 503 }
     );
   }
 
-  const token = sign({ perfil: usuario.perfil }, chave, {
-    algorithm: "HS256",
-    issuer: "doefacil",
-    subject: String(usuario.id_usuario),
-    expiresIn: "1h"
-  });
+  const token = sign(
+    {
+      perfil: usuario.perfil
+    },
+    chave,
+    {
+      algorithm: "HS256",
+      issuer: "doefacil",
+      subject: String(usuario.id_usuario),
+      expiresIn: "1h"
+    }
+  );
 
   res.json({
     token,

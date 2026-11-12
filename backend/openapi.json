@@ -1,0 +1,1679 @@
+
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "DoeFácil API",
+    "version": "1.0.0",
+    "description": "Documentação da API do DoeFácil para gerenciamento de usuários, campanhas, doações, estoque e movimentações."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3000",
+      "description": "Ambiente de desenvolvimento"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Sistema",
+      "description": "Status e disponibilidade da API"
+    },
+    {
+      "name": "Autenticação",
+      "description": "Cadastro público e login"
+    },
+    {
+      "name": "Usuários",
+      "description": "Gerenciamento administrativo de usuários"
+    },
+    {
+      "name": "Campanhas",
+      "description": "Consulta pública e gerenciamento administrativo de campanhas"
+    },
+    {
+      "name": "Doações",
+      "description": "Cadastro, consulta, edição e cancelamento de doações"
+    },
+    {
+      "name": "Estoque",
+      "description": "Consulta de itens, saldos, indicadores, recebimentos e saídas"
+    },
+    {
+      "name": "Movimentações",
+      "description": "Histórico de entradas e saídas do estoque"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Informe o token JWT retornado pelo login."
+      }
+    },
+    "schemas": {
+      "Erro": {
+        "type": "object",
+        "properties": {
+          "mensagem": {
+            "type": "string",
+            "example": "Erro ao processar a solicitação."
+          }
+        }
+      },
+      "Usuario": {
+        "type": "object",
+        "required": [
+          "id_usuario",
+          "nome",
+          "email",
+          "perfil",
+          "ativo"
+        ],
+        "properties": {
+          "id_usuario": {
+            "type": "integer",
+            "example": 1
+          },
+          "nome": {
+            "type": "string",
+            "example": "Maria Silva"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "maria@exemplo.com"
+          },
+          "perfil": {
+            "type": "string",
+            "enum": [
+              "DOADOR",
+              "FUNCIONARIO",
+              "ADMINISTRADOR"
+            ],
+            "example": "DOADOR"
+          },
+          "ativo": {
+            "type": "boolean",
+            "description": "Indica se a conta está ativa.",
+            "example": true
+          }
+        }
+      },
+      "CadastroRequest": {
+        "type": "object",
+        "required": [
+          "nome",
+          "email",
+          "senha"
+        ],
+        "properties": {
+          "nome": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "example": "Maria Silva"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 150,
+            "example": "maria@exemplo.com"
+          },
+          "senha": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "description": "Senha de pelo menos 8 caracteres e no máximo 72 bytes em UTF-8.",
+            "example": "SenhaSegura123"
+          }
+        }
+      },
+      "LoginRequest": {
+        "type": "object",
+        "required": [
+          "email",
+          "senha"
+        ],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "maria@exemplo.com"
+          },
+          "senha": {
+            "type": "string",
+            "format": "password",
+            "example": "SenhaSegura123"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "required": [
+          "token",
+          "usuario"
+        ],
+        "properties": {
+          "token": {
+            "type": "string",
+            "description": "Token JWT válido por uma hora."
+          },
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          }
+        }
+      },
+      "CadastroUsuarioRequest": {
+        "type": "object",
+        "required": [
+          "nome",
+          "email",
+          "senha",
+          "perfil"
+        ],
+        "properties": {
+          "nome": {
+            "type": "string",
+            "maxLength": 100,
+            "example": "João Oliveira"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 150,
+            "example": "joao@doefacil.com"
+          },
+          "senha": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "example": "SenhaSegura123"
+          },
+          "perfil": {
+            "type": "string",
+            "enum": [
+              "FUNCIONARIO",
+              "ADMINISTRADOR"
+            ],
+            "example": "FUNCIONARIO"
+          }
+        }
+      },
+      "CadastroUsuarioResponse": {
+        "type": "object",
+        "required": [
+          "usuario"
+        ],
+        "properties": {
+          "usuario": {
+            "$ref": "#/components/schemas/Usuario"
+          }
+        }
+      },
+      "EdicaoFuncionarioRequest": {
+        "type": "object",
+        "required": [
+          "nome",
+          "email"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "nome": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100,
+            "example": "João Oliveira"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "maxLength": 150,
+            "example": "joao@doefacil.com"
+          },
+          "senha": {
+            "type": "string",
+            "format": "password",
+            "minLength": 8,
+            "description": "Opcional. Se omitida, a senha atual será mantida.",
+            "example": "NovaSenha123!"
+          }
+        }
+      },
+      "Campanha": {
+        "type": "object",
+        "properties": {
+          "id_campanha": {
+            "type": "integer",
+            "example": 1
+          },
+          "titulo": {
+            "type": "string",
+            "example": "Campanha de arrecadação de alimentos"
+          },
+          "descricao": {
+            "type": "string",
+            "nullable": true,
+            "example": "Arrecadação de alimentos não perecíveis."
+          },
+          "data_inicio": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-11-10"
+          },
+          "data_fim": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "example": "2026-12-20"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ATIVA",
+              "ENCERRADA",
+              "CANCELADA"
+            ],
+            "example": "ATIVA"
+          }
+        }
+      },
+      "CampanhaRequest": {
+        "type": "object",
+        "required": [
+          "titulo",
+          "data_inicio"
+        ],
+        "properties": {
+          "titulo": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 120,
+            "example": "Campanha de arrecadação de alimentos"
+          },
+          "descricao": {
+            "type": "string",
+            "example": "Arrecadação de alimentos não perecíveis."
+          },
+          "data_inicio": {
+            "type": "string",
+            "format": "date",
+            "example": "2026-11-10"
+          },
+          "data_fim": {
+            "type": "string",
+            "format": "date",
+            "nullable": true,
+            "example": "2026-12-20"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "ATIVA",
+              "ENCERRADA"
+            ],
+            "default": "ATIVA",
+            "example": "ATIVA"
+          }
+        }
+      },
+      "ItemDoacaoRequest": {
+        "type": "object",
+        "required": [
+          "id_item",
+          "quantidade"
+        ],
+        "properties": {
+          "id_item": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 1
+          },
+          "quantidade": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 99999999.99,
+            "multipleOf": 0.01,
+            "example": 2
+          }
+        }
+      },
+      "DoacaoRequest": {
+        "type": "object",
+        "required": [
+          "itens"
+        ],
+        "properties": {
+          "id_campanha": {
+            "type": "integer",
+            "nullable": true,
+            "minimum": 1,
+            "description": "Opcional. Quando informada, a campanha deve estar ativa.",
+            "example": 1
+          },
+          "observacao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000,
+            "example": "Alimentos não perecíveis."
+          },
+          "itens": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "Cada item deve aparecer apenas uma vez.",
+            "items": {
+              "$ref": "#/components/schemas/ItemDoacaoRequest"
+            }
+          }
+        }
+      },
+      "EdicaoDoacaoRequest": {
+        "type": "object",
+        "required": [
+          "itens"
+        ],
+        "properties": {
+          "observacao": {
+            "type": "string",
+            "nullable": true,
+            "maxLength": 1000,
+            "example": "Doação atualizada."
+          },
+          "itens": {
+            "type": "array",
+            "minItems": 1,
+            "maxItems": 100,
+            "description": "Lista completa que substituirá os itens anteriores.",
+            "items": {
+              "$ref": "#/components/schemas/ItemDoacaoRequest"
+            }
+          }
+        }
+      },
+      "Doacao": {
+        "type": "object",
+        "properties": {
+          "id_doacao": {
+            "type": "integer",
+            "example": 1
+          },
+          "id_campanha": {
+            "type": "integer",
+            "nullable": true,
+            "example": 1
+          },
+          "data_cadastro": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "CADASTRADA",
+              "RECEBIDA",
+              "CANCELADA"
+            ],
+            "example": "CADASTRADA"
+          },
+          "observacao": {
+            "type": "string",
+            "nullable": true,
+            "example": "Alimentos não perecíveis."
+          }
+        }
+      },
+      "DoacaoListaAdministrativa": {
+        "type": "object",
+        "properties": {
+          "id_doacao": {
+            "type": "integer",
+            "example": 1
+          },
+          "doador": {
+            "type": "string",
+            "example": "Maria Silva"
+          },
+          "status": {
+            "type": "string",
+            "example": "CADASTRADA"
+          },
+          "data_cadastro": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ItemMinhaDoacao": {
+        "type": "object",
+        "properties": {
+          "id_item": {
+            "type": "integer",
+            "example": 1
+          },
+          "nome": {
+            "type": "string",
+            "example": "Arroz"
+          },
+          "unidade_medida": {
+            "type": "string",
+            "example": "kg"
+          },
+          "quantidade": {
+            "type": "number",
+            "example": 2
+          }
+        }
+      },
+      "MinhaDoacao": {
+        "allOf": [
+          {
+            "$ref": "#/components/schemas/Doacao"
+          },
+          {
+            "type": "object",
+            "properties": {
+              "id_doador": {
+                "type": "integer",
+                "example": 2
+              },
+              "titulo_campanha": {
+                "type": "string",
+                "nullable": true,
+                "example": "Campanha de alimentos"
+              },
+              "itens": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ItemMinhaDoacao"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "ResumoEstoque": {
+        "type": "object",
+        "required": [
+          "aguardando_recebimento",
+          "recebidas_hoje",
+          "itens_estoque_baixo"
+        ],
+        "properties": {
+          "aguardando_recebimento": {
+            "type": "integer",
+            "example": 5
+          },
+          "recebidas_hoje": {
+            "type": "integer",
+            "example": 2
+          },
+          "itens_estoque_baixo": {
+            "type": "integer",
+            "example": 3
+          }
+        }
+      },
+      "SaldoItem": {
+        "type": "object",
+        "properties": {
+          "id_item": {
+            "type": "integer",
+            "example": 1
+          },
+          "nome": {
+            "type": "string",
+            "example": "Arroz"
+          },
+          "unidade_medida": {
+            "type": "string",
+            "example": "kg"
+          },
+          "saldo": {
+            "type": "string",
+            "description": "Saldo calculado pelo PostgreSQL, retornado como texto.",
+            "example": "12.00"
+          }
+        }
+      },
+      "SaidaEstoqueRequest": {
+        "type": "object",
+        "required": [
+          "id_item",
+          "quantidade"
+        ],
+        "properties": {
+          "id_item": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 1
+          },
+          "quantidade": {
+            "type": "number",
+            "minimum": 0.01,
+            "maximum": 99999999.99,
+            "multipleOf": 0.01,
+            "example": 2
+          }
+        }
+      },
+      "Movimentacao": {
+        "type": "object",
+        "properties": {
+          "id_movimentacao": {
+            "type": "integer",
+            "example": 1
+          },
+          "id_item": {
+            "type": "integer",
+            "example": 1
+          },
+          "nome_item": {
+            "type": "string",
+            "example": "Arroz"
+          },
+          "unidade_medida": {
+            "type": "string",
+            "example": "kg"
+          },
+          "tipo": {
+            "type": "string",
+            "enum": [
+              "ENTRADA",
+              "SAIDA"
+            ],
+            "example": "ENTRADA"
+          },
+          "quantidade": {
+            "type": "string",
+            "example": "5.00"
+          },
+          "data_movimentacao": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "id_funcionario": {
+            "type": "integer",
+            "example": 3
+          },
+          "nome_funcionario": {
+            "type": "string",
+            "example": "João Oliveira"
+          },
+          "id_doacao": {
+            "type": "integer",
+            "nullable": true,
+            "example": 1
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/status": {
+      "get": {
+        "tags": ["Sistema"],
+        "summary": "Consultar status da API",
+        "responses": {
+          "200": {
+            "description": "API funcionando normalmente",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "sistema": {
+                      "type": "string",
+                      "example": "DoeFacil"
+                    },
+                    "status": {
+                      "type": "string",
+                      "example": "online"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/health": {
+      "get": {
+        "tags": ["Sistema"],
+        "summary": "Verificar conexão com o banco de dados",
+        "responses": {
+          "200": {
+            "description": "Banco conectado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "banco": {
+                      "type": "string",
+                      "example": "conectado"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Banco indisponível",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Erro"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/auth/cadastro": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Cadastrar um novo doador",
+        "description": "Cadastro público exclusivo para usuários com perfil DOADOR.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CadastroRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Doador cadastrado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CadastroUsuarioResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "409": {
+            "description": "E-mail já cadastrado"
+          }
+        }
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": ["Autenticação"],
+        "summary": "Realizar login",
+        "description": "Autentica o usuário e retorna um token JWT. Contas desativadas não podem realizar login.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login realizado com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Credenciais inválidas ou conta desativada"
+          },
+          "503": {
+            "description": "Autenticação não configurada"
+          }
+        }
+      }
+    },
+    "/api/usuarios": {
+      "get": {
+        "tags": ["Usuários"],
+        "summary": "Listar usuários cadastrados",
+        "description": "Acesso exclusivo para administradores. Inclui contas ativas e inativas, sem expor senhas.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de usuários",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Usuario"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Acesso permitido somente para administradores"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Usuários"],
+        "summary": "Cadastrar funcionário ou administrador",
+        "description": "Somente administradores podem cadastrar funcionários ou outros administradores.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CadastroUsuarioRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Usuário cadastrado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CadastroUsuarioResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Sem permissão"
+          },
+          "409": {
+            "description": "E-mail já cadastrado"
+          }
+        }
+      }
+    },
+    "/api/usuarios/{id}": {
+      "put": {
+        "tags": ["Usuários"],
+        "summary": "Editar funcionário ativo",
+        "description": "Permite ao administrador alterar nome, e-mail e opcionalmente senha de um funcionário ativo. Não permite editar administradores, doadores ou funcionários desativados.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID do funcionário.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EdicaoFuncionarioRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Funcionário atualizado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CadastroUsuarioResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos ou tentativa de alterar perfil"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Sem permissão"
+          },
+          "404": {
+            "description": "Funcionário ativo não encontrado"
+          },
+          "409": {
+            "description": "E-mail já cadastrado"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Usuários"],
+        "summary": "Desativar funcionário",
+        "description": "Desativação lógica: define ativo=false sem excluir o histórico. O funcionário perde acesso ao sistema, inclusive com tokens anteriormente emitidos.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Funcionário desativado, sem conteúdo na resposta"
+          },
+          "400": {
+            "description": "ID inválido"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Sem permissão"
+          },
+          "404": {
+            "description": "Funcionário não encontrado ou já desativado"
+          }
+        }
+      }
+    },
+    "/api/campanhas": {
+      "get": {
+        "tags": ["Campanhas"],
+        "summary": "Listar campanhas disponíveis",
+        "description": "Consulta pública. Campanhas canceladas não são retornadas.",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "description": "Filtro opcional por status.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "ATIVA",
+                "ENCERRADA"
+              ]
+            },
+            "example": "ATIVA"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de campanhas",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Campanha"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Filtro inválido"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Campanhas"],
+        "summary": "Cadastrar uma campanha",
+        "description": "Operação exclusiva para administradores.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampanhaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Campanha cadastrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Campanha"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Sem permissão"
+          }
+        }
+      }
+    },
+    "/api/campanhas/{id}": {
+      "get": {
+        "tags": ["Campanhas"],
+        "summary": "Consultar campanha por ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Campanha encontrada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Campanha"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID inválido"
+          },
+          "404": {
+            "description": "Campanha não encontrada ou cancelada"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Campanhas"],
+        "summary": "Atualizar uma campanha",
+        "description": "Operação exclusiva para administradores.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CampanhaRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Campanha atualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Campanha"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Dados inválidos"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Sem permissão"
+          },
+          "404": {
+            "description": "Campanha não encontrada"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Campanhas"],
+        "summary": "Cancelar uma campanha",
+        "description": "Cancelamento lógico: altera o status para CANCELADA.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Campanha cancelada, sem conteúdo"
+          },
+          "400": {
+            "description": "ID inválido"
+          },
+          "401": {
+            "description": "Não autenticado"
+          },
+          "403": {
+            "description": "Sem permissão"
+          },
+          "404": {
+            "description": "Campanha não encontrada"
+          }
+        }
+      }
+    },
+    "/api/itens": {
+      "get": {
+        "tags": ["Estoque"],
+        "summary": "Listar itens cadastrados",
+        "description": "Consulta os itens cadastrados, ordenados por nome. Esta rota não exige autenticação.",
+        "responses": {
+          "200": {
+            "description": "Lista de itens",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "id_item": {
+                        "type": "integer",
+                        "example": 1
+                      },
+                      "nome": {
+                        "type": "string",
+                        "example": "Arroz"
+                      },
+                      "unidade_medida": {
+                        "type": "string",
+                        "example": "kg"
+                      },
+                      "estoque_minimo": {
+                        "type": "number",
+                        "example": 10
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/doacoes": {
+      "get": {
+        "tags": ["Doações"],
+        "summary": "Listar todas as doações",
+        "description": "Retorna ID, nome do doador, status e data de cadastro. Acesso para funcionários e administradores.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Lista de doações",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DoacaoListaAdministrativa"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente ou inválido"
+          },
+          "403": {
+            "description": "Usuário sem permissão"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Doações"],
+        "summary": "Cadastrar uma doação",
+        "description": "Permite ao doador autenticado cadastrar uma doação com 1 a 100 itens. Cada item deve ter quantidade positiva e não pode se repetir. A campanha é opcional e deve estar ativa quando informada.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DoacaoRequest"
+              },
+              "example": {
+                "id_campanha": 1,
+                "observacao": "Doação de alimentos.",
+                "itens": [
+                  {
+                    "id_item": 1,
+                    "quantidade": 5
+                  },
+                  {
+                    "id_item": 2,
+                    "quantidade": 3
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Doação cadastrada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Doacao"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Itens, quantidades, campanha ou observação inválidos"
+          },
+          "401": {
+            "description": "Token ausente ou inválido"
+          },
+          "403": {
+            "description": "Usuário não possui perfil de doador"
+          }
+        }
+      }
+    },
+    "/api/doacoes/minhas": {
+      "get": {
+        "tags": ["Doações"],
+        "summary": "Consultar minhas doações",
+        "description": "Retorna somente as doações do usuário DOADOR autenticado, incluindo itens e campanha associada.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Doações do usuário",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MinhaDoacao"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente ou inválido"
+          },
+          "403": {
+            "description": "Acesso permitido somente para doadores"
+          }
+        }
+      }
+    },
+    "/api/doacoes/{id}": {
+      "put": {
+        "tags": ["Doações"],
+        "summary": "Editar minha doação",
+        "description": "O doador pode atualizar os itens e a observação de sua própria doação somente enquanto o status for CADASTRADA. A lista enviada substitui todos os itens anteriores.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID da doação.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EdicaoDoacaoRequest"
+              },
+              "example": {
+                "observacao": "Quantidade atualizada.",
+                "itens": [
+                  {
+                    "id_item": 1,
+                    "quantidade": 10
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Doação atualizada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Doacao"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID ou dados inválidos"
+          },
+          "401": {
+            "description": "Token ausente ou inválido"
+          },
+          "403": {
+            "description": "Usuário não possui perfil de doador"
+          },
+          "404": {
+            "description": "Doação não encontrada ou não pertence ao usuário"
+          },
+          "409": {
+            "description": "Doação já recebida ou cancelada"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Doações"],
+        "summary": "Cancelar minha doação",
+        "description": "Realiza cancelamento lógico da própria doação, alterando o status para CANCELADA. Somente doações com status CADASTRADA podem ser canceladas.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID da doação.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Doação cancelada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Doacao"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID inválido"
+          },
+          "401": {
+            "description": "Token ausente ou inválido"
+          },
+          "403": {
+            "description": "Usuário não possui perfil de doador"
+          },
+          "404": {
+            "description": "Doação não encontrada ou não pertence ao usuário"
+          },
+          "409": {
+            "description": "Doação já recebida ou cancelada"
+          }
+        }
+      }
+    },
+    "/api/estoque/resumo": {
+      "get": {
+        "tags": ["Estoque"],
+        "summary": "Consultar indicadores do estoque",
+        "description": "Retorna quantidade de doações aguardando recebimento, doações recebidas hoje considerando o horário de Brasília e itens abaixo do estoque mínimo. Acesso para funcionários e administradores.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Indicadores retornados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumoEstoque"
+                },
+                "example": {
+                  "aguardando_recebimento": 5,
+                  "recebidas_hoje": 2,
+                  "itens_estoque_baixo": 3
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente ou inválido"
+          },
+          "403": {
+            "description": "Usuário sem permissão"
+          }
+        }
+      }
+    },
+    "/api/estoque": {
+      "get": {
+        "tags": ["Estoque"],
+        "summary": "Consultar saldo dos itens",
+        "description": "Retorna o saldo calculado pelas entradas e saídas de cada item. Acesso para funcionários e administradores.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Saldos retornados",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SaldoItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Token ausente ou inválido"
+          },
+          "403": {
+            "description": "Usuário sem permissão"
+          }
+        }
+      }
+    },
+    "/api/estoque/receber/{id}": {
+      "post": {
+        "tags": ["Estoque"],
+        "summary": "Confirmar recebimento de uma doação",
+        "description": "Registra uma movimentação de ENTRADA para cada item da doação e altera seu status para RECEBIDA. Somente doações CADASTRADAS podem ser recebidas. Acesso para funcionários e administradores.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "description": "ID da doação que será recebida.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Recebimento confirmado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mensagem": {
+                      "type": "string",
+                      "example": "Doacao recebida"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID inválido"
+          },
+          "401": {
+            "description": "Token ausente ou inválido"
+          },
+          "403": {
+            "description": "Usuário sem permissão"
+          },
+          "404": {
+            "description": "Doação não encontrada"
+          },
+          "409": {
+            "description": "Doação já processada"
+          }
+        }
+      }
+    },
+    "/api/estoque/saidas": {
+      "post": {
+        "tags": ["Estoque"],
+        "summary": "Registrar saída de estoque",
+        "description": "Registra uma movimentação do tipo SAIDA. A quantidade deve ser positiva, ter no máximo duas casas decimais e não ultrapassar o saldo disponível. Acesso para funcionários e administradores.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaidaEstoqueRequest"
+              },
+              "example": {
+                "id_item": 1,
+                "quantidade": 2
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Saída registrada com sucesso",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "mensagem": {
+                      "type": "string",
+                      "example": "Saida registrada com sucesso"
+                    },
+                    "movimentacao": {
+                      "type": "object",
+                      "description": "Registro da movimentação criado no banco de dados.",
+                      "properties": {
+                        "id_movimentacao": {
+                          "type": "integer",
+                          "example": 10
+                        },
+                        "id_item": {
+                          "type": "integer",
+                          "example": 1
+                        },
+                        "id_funcionario": {
+                          "type": "integer",
+                          "example": 3
+                        },
+                        "tipo": {
+                          "type": "string",
+                          "example": "SAIDA"
+                        },
+                        "quantidade": {
+                          "type": "string",
+                          "example": "2.00"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID ou quantidade inválidos"
+          },
+          "401": {
+            "description": "Token ausente ou inválido"
+          },
+          "403": {
+            "description": "Usuário sem permissão"
+          },
+          "404": {
+            "description": "Item não encontrado"
+          },
+          "409": {
+            "description": "Saldo insuficiente"
+          }
+        }
+      }
+    },
+    "/api/movimentacoes": {
+      "get": {
+        "tags": ["Movimentações"],
+        "summary": "Consultar histórico de movimentações",
+        "description": "Retorna até 100 movimentações de entrada e saída, ordenadas da mais recente para a mais antiga. Permite filtrar por ID do item. Acesso para funcionários e administradores.",
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id_item",
+            "in": "query",
+            "required": false,
+            "description": "Filtra as movimentações por item.",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "example": 1
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Histórico retornado",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Movimentacao"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "ID do item inválido"
+          },
+          "401": {
+            "description": "Token ausente ou inválido"
+          },
+          "403": {
+            "description": "Usuário sem permissão"
+          }
+        }
+      }
+    }
+  }
+}
