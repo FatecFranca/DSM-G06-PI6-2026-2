@@ -20,7 +20,6 @@ type Item = {
   nome: string;
 };
 
-// Formata a data no horário oficial de São Paulo.
 function formatarData(data: string) {
   const dataConvertida = new Date(data);
 
@@ -45,9 +44,8 @@ export default function HistoricoMovimentacoes() {
   const [itens, setItens] = useState<Item[]>([]);
   const [idItem, setIdItem] = useState("");
   const [mensagem, setMensagem] = useState("");
-  const [carregando, setCarregando] = useState(false);
+  const [carregando, setCarregando] = useState(true);
 
-  // Carrega as movimentações e os itens ao abrir a tela.
   useEffect(() => {
     let ativo = true;
 
@@ -87,7 +85,6 @@ export default function HistoricoMovimentacoes() {
     };
   }, []);
 
-  // Atualiza o histórico, aplicando o filtro selecionado.
   async function carregar(filtro = idItem) {
     setCarregando(true);
     setMensagem("");
@@ -124,7 +121,6 @@ export default function HistoricoMovimentacoes() {
         Consulte as entradas e saídas registradas no estoque.
       </p>
 
-      {/* Filtro de movimentações */}
       <div
         style={{
           display: "flex",
@@ -167,74 +163,71 @@ export default function HistoricoMovimentacoes() {
         </button>
       </div>
 
-      {/* Mensagens de erro */}
       {mensagem && (
-        <p role="alert">{mensagem}</p>
+        <p role="alert" aria-live="polite">
+          {mensagem}
+        </p>
       )}
 
-      {/* Tabela de movimentações */}
-      <div style={{ overflowX: "auto" }}>
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Data</th>
-              <th>Item</th>
-              <th>Tipo</th>
-              <th>Quantidade</th>
-              <th>Responsável</th>
-            </tr>
-          </thead>
+      {carregando ? (
+        <p>Carregando movimentações...</p>
+      ) : (
+        <>
+          <div style={{ overflowX: "auto" }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Data</th>
+                  <th>Item</th>
+                  <th>Tipo</th>
+                  <th>Quantidade</th>
+                  <th>Responsável</th>
+                </tr>
+              </thead>
 
-          <tbody>
-            {movimentacoes.map((movimentacao) => (
-              <tr key={movimentacao.id_movimentacao}>
-                <td>
-                  {movimentacao.id_movimentacao}
-                </td>
+              <tbody>
+                {movimentacoes.map((movimentacao) => (
+                  <tr key={movimentacao.id_movimentacao}>
+                    <td>{movimentacao.id_movimentacao}</td>
 
-                <td>
-                  {formatarData(
-                    movimentacao.data_movimentacao
-                  )}
-                </td>
+                    <td>
+                      {formatarData(
+                        movimentacao.data_movimentacao
+                      )}
+                    </td>
 
-                <td>
-                  {movimentacao.nome_item}
-                </td>
+                    <td>{movimentacao.nome_item}</td>
 
-                <td>
-                  <span
-                    className={
-                      movimentacao.tipo === "ENTRADA"
-                        ? "situacao recebida"
-                        : "situacao aguardando"
-                    }
-                  >
-                    {movimentacao.tipo}
-                  </span>
-                </td>
+                    <td>
+                      <span
+                        className={
+                          movimentacao.tipo === "ENTRADA"
+                            ? "situacao recebida"
+                            : "situacao aguardando"
+                        }
+                      >
+                        {movimentacao.tipo}
+                      </span>
+                    </td>
 
-                <td>
-                  {movimentacao.quantidade}{" "}
-                  {movimentacao.unidade_medida}
-                </td>
+                    <td>
+                      {movimentacao.quantidade}{" "}
+                      {movimentacao.unidade_medida}
+                    </td>
 
-                <td>
-                  {movimentacao.nome_funcionario}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                    <td>{movimentacao.nome_funcionario}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      {/* Histórico vazio */}
-      {!carregando &&
-        movimentacoes.length === 0 &&
-        !mensagem && (
-          <p>Nenhuma movimentação encontrada.</p>
-        )}
+          {movimentacoes.length === 0 && (
+            <p>Nenhuma movimentação encontrada.</p>
+          )}
+        </>
+      )}
     </section>
   );
 }

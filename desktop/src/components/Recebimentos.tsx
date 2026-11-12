@@ -19,11 +19,12 @@ type Props = {
   onAtualizar?: () => void | Promise<void>;
 };
 
-export default function RecebimentosSprint2({ onAtualizar }: Props) {
+export default function Recebimentos({ onAtualizar }: Props) {
   const [doacoes, setDoacoes] = useState<Doacao[]>([]);
   const [itens, setItens] = useState<Item[]>([]);
   const [mensagem, setMensagem] = useState("");
-  const [carregando, setCarregando] = useState(false);
+  const [carregando, setCarregando] = useState(true);
+  const [processando, setProcessando] = useState(false);
 
   async function carregar() {
     const [listaDoacoes, listaItens] = await Promise.all([
@@ -57,6 +58,10 @@ export default function RecebimentosSprint2({ onAtualizar }: Props) {
               : "Erro ao carregar os recebimentos."
           );
         }
+      } finally {
+        if (ativo) {
+          setCarregando(false);
+        }
       }
     }
 
@@ -69,7 +74,7 @@ export default function RecebimentosSprint2({ onAtualizar }: Props) {
 
   async function confirmarRecebimento(idDoacao: number) {
     setMensagem("");
-    setCarregando(true);
+    setProcessando(true);
 
     try {
       await api(`/estoque/receber/${idDoacao}`, {
@@ -83,7 +88,7 @@ export default function RecebimentosSprint2({ onAtualizar }: Props) {
         await onAtualizar?.();
       } catch {
         setMensagem(
-          "Doação recebida com sucesso, mas não foi possível atualizar todos os dados. Clique em Atualizar."
+          "Doação recebida, mas não foi possível atualizar todos os dados. Clique em Atualizar."
         );
       }
     } catch (erro) {
@@ -93,13 +98,13 @@ export default function RecebimentosSprint2({ onAtualizar }: Props) {
           : "Erro ao confirmar o recebimento."
       );
     } finally {
-      setCarregando(false);
+      setProcessando(false);
     }
   }
 
   async function atualizar() {
     setMensagem("");
-    setCarregando(true);
+    setProcessando(true);
 
     try {
       await carregar();
@@ -111,7 +116,7 @@ export default function RecebimentosSprint2({ onAtualizar }: Props) {
           : "Erro ao atualizar os dados."
       );
     } finally {
-      setCarregando(false);
+      setProcessando(false);
     }
   }
 
@@ -119,58 +124,74 @@ export default function RecebimentosSprint2({ onAtualizar }: Props) {
     <section className="painel">
       <h3>Recebimentos</h3>
 
-      {mensagem && <p role="status">{mensagem}</p>}
+      {mensagem && (
+        <p role="status" aria-live="polite">
+          {mensagem}
+        </p>
+      )}
 
       <button
         type="button"
         onClick={() => void atualizar()}
-        disabled={carregando}
+        disabled={processando || carregando}
       >
-        {carregando ? "Aguarde..." : "Atualizar"}
+        {processando ? "Aguarde..." : "Atualizar"}
       </button>
 
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Doador</th>
-            <th>Status</th>
-            <th>Ação</th>
-          </tr>
-        </thead>
+      {carregando ? (
+        <p>Carregando recebimentos...</p>
+      ) : (
+        <>
+          <div style={{ overflowX: "auto" }}>
+            <table>
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Doador</th>
+                  <th>Status</th>
+                  <th>Ação</th>
+                </tr>
+              </thead>
 
-        <tbody>
-          {doacoes.map((doacao) => (
-            <tr key={doacao.id_doacao}>
-              <td>{doacao.id_doacao}</td>
-              <td>{doacao.doador}</td>
-              <td>{doacao.status}</td>
+              <tbody>
+                {doacoes.map((doacao) => (
+                  <tr key={doacao.id_doacao}>
+                    <td>{doacao.id_doacao}</td>
+                    <td>{doacao.doador}</td>
+                    <td>{doacao.status}</td>
 
-              <td>
-                {doacao.status === "CADASTRADA" && (
-                  <button
-                    type="button"
-                    disabled={carregando}
-                    onClick={() =>
-                      void confirmarRecebimento(doacao.id_doacao)
-                    }
-                  >
-                    Confirmar recebimento
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                    <td>
+                      {doacao.status === "CADASTRADA" ? (
+                        <button
+                          type="button"
+                          disabled={processando}
+                          onClick={() =>
+                            void confirmarRecebimento(doacao.id_doacao)
+                          }
+                        >
+                          Confirmar recebimento
+                        </button>
+                      ) : (
+                        "Sem ações disponíveis"
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      {doacoes.length === 0 && (
-        <p>Nenhuma doação encontrada.</p>
+          {doacoes.length === 0 && (
+            <p>Nenhuma doação encontrada.</p>
+          )}
+        </>
       )}
 
       <h3>Estoque persistido</h3>
 
-      {itens.length === 0 ? (
+      {carregando ? (
+        <p>Carregando estoque...</p>
+      ) : itens.length === 0 ? (
         <p>Nenhum item encontrado no estoque.</p>
       ) : (
         itens.map((item) => (
