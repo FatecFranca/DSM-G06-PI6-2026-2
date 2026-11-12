@@ -87,7 +87,7 @@ function App() {
 
         {!perfil && (
           <section className="tabela-container campanhas acesso-web">
-            <p>Entre com sua conta de administrador ou doador.</p>
+            <p>Entre com sua conta.</p>
             {erro && <p role="alert" className="mensagem-erro">{erro}</p>}
             <form className="formulario-campanha" onSubmit={entrar}>
               <label htmlFor="login-email">E-mail</label>
