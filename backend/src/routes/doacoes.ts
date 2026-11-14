@@ -1,9 +1,9 @@
-
 import { Router } from "express";
 import type { PoolClient } from "pg";
 import { db } from "../db";
 import { proteger } from "../proteger";
 import { exigir, idValido } from "../validar";
+import { publishToDoacoesQueue } from "../messaging/sqsService";
 
 const rotas = Router();
 
@@ -115,17 +115,17 @@ rotas.get("/minhas", proteger("DOADOR"), async (_req, res) => {
 
   const { rows } = await db.query(
     `SELECT d.*, c.titulo AS titulo_campanha,
-      COALESCE((
-        SELECT json_agg(json_build_object(
-          'id_item', i.id_item,
-          'nome', i.nome,
-          'unidade_medida', i.unidade_medida,
-          'quantidade', di.quantidade
-        ) ORDER BY di.id_item_doacao)
-        FROM item_doacao di
-        JOIN item i ON i.id_item = di.id_item
-        WHERE di.id_doacao = d.id_doacao
-      ), '[]'::json) AS itens
+     COALESCE((
+       SELECT json_agg(json_build_object(
+         'id_item', i.id_item,
+         'nome', i.nome,
+         'unidade_medida', i.unidade_medida,
+         'quantidade', di.quantidade
+       ) ORDER BY di.id_item_doacao)
+       FROM item_doacao di
+       JOIN item i ON i.id_item = di.id_item
+       WHERE di.id_doacao = d.id_doacao
+     ), '[]'::json) AS itens
      FROM doacao d
      LEFT JOIN campanha c ON c.id_campanha = d.id_campanha
      WHERE d.id_doador = $1
@@ -223,6 +223,20 @@ rotas.post("/", proteger("DOADOR"), async (req, res) => {
     }
 
     await cliente.query("COMMIT");
+
+    // Envio para a mensageria na AWS (SQS) isolado com try/catch próprio
+    try {
+      await publishToDoacoesQueue({
+        evento: "NOVA_DOACAO",
+        id_doacao: doacao.id_doacao,
+        id_doador: idDoador,
+        data_cadastro: doacao.data_cadastro
+      });
+      console.log("Mensagem enviada com sucesso para o SQS!");
+    } catch (erroSqs) {
+      console.error("FALHA AO ENVIAR PARA O SQS:", erroSqs);
+    }
+
     res.status(201).json(doacao);
   } catch (erro) {
     await cliente.query("ROLLBACK");
