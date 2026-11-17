@@ -34,7 +34,7 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F4F7F4"
+    backgroundColor: "#F4F8F9"
   },
   cabecalho: {
     backgroundColor: "#087883",
@@ -48,7 +48,7 @@ const styles = StyleSheet.create({
     fontWeight: "bold"
   },
   subtitulo: {
-    color: "#E8F5E9",
+    color: "#E0F2F1",
     fontSize: 16,
     marginTop: 6
   }

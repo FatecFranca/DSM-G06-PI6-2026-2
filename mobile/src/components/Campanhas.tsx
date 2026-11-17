@@ -99,31 +99,31 @@ export default function Campanhas({
 
 const styles = StyleSheet.create({
   titulo: {
-    color: "#34483A",
+    color: "#344848",
     fontSize: 14,
     fontWeight: "600",
     marginTop: 12,
     marginBottom: 8
   },
   descricao: {
-    color: "#607468",
+    color: "#5D7275",
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 8
   },
   opcao: {
     borderWidth: 1,
-    borderColor: "#CEDBCF",
+    borderColor: "#B2C5C7",
     borderRadius: 10,
     padding: 14,
     marginBottom: 8
   },
   selecionada: {
-    backgroundColor: "#E8F5E9",
-    borderColor: "#2E7D32"
+    backgroundColor: "#E0F2F1",
+    borderColor: "#087883"
   },
   nome: {
-    color: "#2E7D32",
+    color: "#087883",
     fontSize: 15,
     fontWeight: "600"
   },
