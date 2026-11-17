@@ -17,6 +17,8 @@ type Item = {
   id_item: number;
   nome: string;
   unidade_medida: string;
+  id_categoria?: number | null;
+  nome_categoria?: string | null;
 };
 
 type Doacao = {
@@ -33,6 +35,12 @@ const situacoes: Record<string, string> = {
   RECEBIDA: "Recebida",
   CANCELADA: "Cancelada"
 };
+
+function chaveCategoria(item: Item) {
+  return item.id_categoria == null
+    ? "sem-categoria"
+    : String(item.id_categoria);
+}
 
 function lerQuantidade(texto: string, nome: string) {
   const limpo = texto.trim();
@@ -56,6 +64,8 @@ export default function PainelDoacoes() {
   const [doacoes, setDoacoes] = useState<Doacao[]>([]);
   const [campanhas, setCampanhas] = useState<Campanha[]>([]);
   const [idCampanha, setIdCampanha] = useState<number | null>(null);
+  const [categoriaSelecionada, setCategoriaSelecionada] =
+    useState<string | null>(null);
   const [idItem, setIdItem] = useState<number | null>(null);
   const [quantidade, setQuantidade] = useState("");
   const [observacao, setObservacao] = useState("");
@@ -114,6 +124,7 @@ export default function PainelDoacoes() {
         setObservacao("");
         setIdItem(null);
         setIdCampanha(null);
+        setCategoriaSelecionada(null);
         setQuantidade("");
 
         Alert.alert(
@@ -121,6 +132,15 @@ export default function PainelDoacoes() {
           "Essa doação não está mais disponível para edição. Confira a situação no histórico."
         );
       }
+
+      setCategoriaSelecionada((atual) =>
+        atual !== null &&
+        listaItens.some(
+          (item: Item) => chaveCategoria(item) === atual
+        )
+          ? atual
+          : null
+      );
 
       setIdItem((atual) =>
         listaItens.some((item: Item) => item.id_item === atual)
@@ -154,7 +174,31 @@ export default function PainelDoacoes() {
     };
   }, [carregar]);
 
-  const selecionado = itens.find((item) => item.id_item === idItem);
+  const categorias = Array.from(
+    new Map(
+      itens.map((item) => [
+        chaveCategoria(item),
+        {
+          chave: chaveCategoria(item),
+          nome:
+            item.nome_categoria?.trim() ||
+            (item.id_categoria == null
+              ? "Sem categoria"
+              : `Categoria ${item.id_categoria}`)
+        }
+      ])
+    ).values()
+  ).sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
+  const itensFiltrados = itens
+    .filter(
+      (item) => chaveCategoria(item) === categoriaSelecionada
+    )
+    .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"));
+
+  const selecionado = itensFiltrados.find(
+    (item) => item.id_item === idItem
+  );
 
   const campanhaSelecionada = campanhas.find(
     (campanha) =>
@@ -173,12 +217,19 @@ export default function PainelDoacoes() {
     !ocupado &&
     !erro &&
     !campanhaIndisponivel &&
-    (editando !== null || itens.length > 0);
+    (editando !== null || selecionado !== undefined);
+
+  function escolherCategoria(chave: string) {
+    setCategoriaSelecionada(chave);
+    setIdItem(null);
+    setQuantidade("");
+  }
 
   function limparFormulario() {
     setEditando(null);
     edicaoAtual.current = null;
     setIdCampanha(null);
+    setCategoriaSelecionada(null);
     setQuantidadesEditadas({});
     setQuantidade("");
     setObservacao("");
@@ -190,6 +241,10 @@ export default function PainelDoacoes() {
 
     setEditando(doacao);
     edicaoAtual.current = doacao;
+
+    setCategoriaSelecionada(null);
+    setIdItem(null);
+    setQuantidade("");
 
     setQuantidadesEditadas(
       Object.fromEntries(
@@ -382,7 +437,7 @@ export default function PainelDoacoes() {
       <Text style={styles.descricao}>
         {editando
           ? "Corrija as quantidades e a observação."
-          : "Escolha uma campanha, se desejar, e informe sua doação."}
+          : "Escolha uma campanha, se desejar, e selecione a categoria e o item da sua doação."}
       </Text>
 
       {erro ? <Text style={styles.erro}>{erro}</Text> : null}
@@ -432,9 +487,47 @@ export default function PainelDoacoes() {
             />
           ) : null}
 
+          <Text style={styles.rotulo}>Categoria</Text>
+
+          <View style={styles.categorias}>
+            {categorias.map((categoria) => (
+              <Pressable
+                key={categoria.chave}
+                accessibilityRole="radio"
+                accessibilityLabel={`Categoria ${categoria.nome}`}
+                accessibilityState={{
+                  checked:
+                    categoriaSelecionada === categoria.chave,
+                  disabled: ocupado
+                }}
+                disabled={ocupado}
+                onPress={() =>
+                  escolherCategoria(categoria.chave)
+                }
+                style={[
+                  styles.opcao,
+                  styles.categoria,
+                  categoriaSelecionada === categoria.chave &&
+                    styles.selecionada,
+                  ocupado && styles.desabilitado
+                ]}
+              >
+                <Text style={styles.textoOpcao}>
+                  {categoria.nome}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+
           <Text style={styles.rotulo}>Item</Text>
 
-          {itens.map((item) => (
+          {categoriaSelecionada === null && itens.length > 0 ? (
+            <Text style={styles.descricao}>
+              Selecione uma categoria para visualizar os itens.
+            </Text>
+          ) : null}
+
+          {itensFiltrados.map((item) => (
             <Pressable
               key={item.id_item}
               accessibilityRole="radio"
@@ -443,7 +536,10 @@ export default function PainelDoacoes() {
                 disabled: ocupado
               }}
               disabled={ocupado}
-              onPress={() => setIdItem(item.id_item)}
+              onPress={() => {
+                setIdItem(item.id_item);
+                setQuantidade("");
+              }}
               style={[
                 styles.opcao,
                 idItem === item.id_item && styles.selecionada
@@ -461,6 +557,15 @@ export default function PainelDoacoes() {
             </Text>
           ) : null}
 
+          {!carregando &&
+          !erro &&
+          categoriaSelecionada !== null &&
+          itensFiltrados.length === 0 ? (
+            <Text style={styles.descricao}>
+              Nenhum item disponível nesta categoria.
+            </Text>
+          ) : null}
+
           <Text style={styles.rotulo}>
             Quantidade
             {selecionado ? ` (${selecionado.unidade_medida})` : ""}
@@ -474,7 +579,7 @@ export default function PainelDoacoes() {
             keyboardType="decimal-pad"
             value={quantidade}
             onChangeText={setQuantidade}
-            editable={!ocupado}
+            editable={!ocupado && selecionado !== undefined}
             maxLength={12}
           />
         </>
@@ -640,6 +745,16 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginTop: 12,
     marginBottom: 8
+  },
+  categorias: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8
+  },
+  categoria: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 0
   },
   opcao: {
     borderWidth: 1,

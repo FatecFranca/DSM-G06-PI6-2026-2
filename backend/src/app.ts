@@ -73,7 +73,13 @@ app.get("/api/health", async (_req, res) => {
 
 app.get("/api/itens", async (_req, res) => {
   const { rows } = await db.query(
-    "SELECT * FROM item ORDER BY nome"
+   `SELECT
+    i.*,
+    c.nome AS nome_categoria
+ FROM item i
+ LEFT JOIN categoria c
+    ON c.id_categoria = i.id_categoria
+ ORDER BY c.nome, i.nome`
   );
 
   res.json(rows);
