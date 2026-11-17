@@ -207,7 +207,7 @@ export default function DoacoesSprint2() {
                   accessibilityLabel="Nome"
                   style={styles.campo}
                   placeholder="Como você se chama?"
-                  placeholderTextColor="#78877C"
+                  placeholderTextColor="#74878A"
                   value={nome}
                   onChangeText={setNome}
                   autoCapitalize="words"
@@ -224,7 +224,7 @@ export default function DoacoesSprint2() {
                 accessibilityLabel="E-mail"
                 style={styles.campo}
                 placeholder="seuemail@exemplo.com"
-                placeholderTextColor="#78877C"
+                placeholderTextColor="#74878A"
                 value={email}
                 onChangeText={setEmail}
                 autoCapitalize="none"
@@ -243,7 +243,7 @@ export default function DoacoesSprint2() {
                   accessibilityLabel="Senha"
                   style={styles.campoSenha}
                   placeholder="Digite sua senha"
-                  placeholderTextColor="#78877C"
+                  placeholderTextColor="#74878A"
                   value={senha}
                   onChangeText={setSenha}
                   secureTextEntry={!senhaVisivel}
@@ -364,7 +364,7 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   descricao: {
-    color: "#607468",
+    color: "#5D7275",
     fontSize: 15,
     lineHeight: 22,
     marginBottom: 24
@@ -373,15 +373,15 @@ const styles = StyleSheet.create({
     marginBottom: 18
   },
   rotulo: {
-    color: "#34483A",
+    color: "#344848",
     fontSize: 14,
     fontWeight: "600",
     marginBottom: 8
   },
   campo: {
-    backgroundColor: "#F8FAF8",
+    backgroundColor: "#F4F8F8",
     borderWidth: 1,
-    borderColor: "#CEDBCF",
+    borderColor: "#B2C5C7",
     borderRadius: 12,
     paddingHorizontal: 14,
     paddingVertical: 14,
@@ -392,9 +392,9 @@ const styles = StyleSheet.create({
   linhaSenha: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#F8FAF8",
+    backgroundColor: "#F4F8F8",
     borderWidth: 1,
-    borderColor: "#CEDBCF",
+    borderColor: "#B2C5C7",
     borderRadius: 12
   },
   campoSenha: {
@@ -411,17 +411,17 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   textoMostrar: {
-    color: "#2E7D32",
+    color: "#087883",
     fontSize: 13,
     fontWeight: "600"
   },
   ajuda: {
-    color: "#607468",
+    color: "#5D7275",
     fontSize: 12,
     marginTop: 8
   },
   botao: {
-    backgroundColor: "#2E7D32",
+    backgroundColor: "#087883",
     borderRadius: 12,
     minHeight: 54,
     padding: 14,
@@ -439,18 +439,18 @@ const styles = StyleSheet.create({
   },
   divisor: {
     height: 1,
-    backgroundColor: "#E7EEE8",
+    backgroundColor: "#E2E8E9",
     marginVertical: 24
   },
   pergunta: {
-    color: "#607468",
+    color: "#5D7275",
     fontSize: 14,
     textAlign: "center",
     marginBottom: 12
   },
   botaoSecundario: {
     borderWidth: 1,
-    borderColor: "#2E7D32",
+    borderColor: "#087883",
     borderRadius: 12,
     minHeight: 50,
     padding: 14,
@@ -458,7 +458,7 @@ const styles = StyleSheet.create({
     justifyContent: "center"
   },
   textoSecundario: {
-    color: "#2E7D32",
+    color: "#087883",
     fontSize: 15,
     fontWeight: "600"
   }

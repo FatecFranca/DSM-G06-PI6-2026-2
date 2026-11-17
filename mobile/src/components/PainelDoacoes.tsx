@@ -443,7 +443,7 @@ export default function PainelDoacoes() {
       {erro ? <Text style={styles.erro}>{erro}</Text> : null}
 
       {carregando ? (
-        <ActivityIndicator color="#2E7D32" />
+        <ActivityIndicator color="#087883" />
       ) : null}
 
       {editando ? (
@@ -575,7 +575,7 @@ export default function PainelDoacoes() {
             accessibilityLabel="Quantidade da doação"
             style={styles.campo}
             placeholder="Ex.: 3"
-            placeholderTextColor="#78877C"
+            placeholderTextColor="#74878A"
             keyboardType="decimal-pad"
             value={quantidade}
             onChangeText={setQuantidade}
@@ -591,7 +591,7 @@ export default function PainelDoacoes() {
         accessibilityLabel="Observação da doação"
         style={[styles.campo, styles.observacao]}
         placeholder="Informações sobre a doação"
-        placeholderTextColor="#78877C"
+        placeholderTextColor="#74878A"
         multiline
         maxLength={1000}
         value={observacao}
@@ -734,13 +734,13 @@ const styles = StyleSheet.create({
     marginBottom: 8
   },
   descricao: {
-    color: "#607468",
+    color: "#5D7275",
     fontSize: 14,
     lineHeight: 21,
     marginBottom: 12
   },
   rotulo: {
-    color: "#34483A",
+    color: "#344848",
     fontWeight: "600",
     fontSize: 14,
     marginTop: 12,
@@ -758,24 +758,24 @@ const styles = StyleSheet.create({
   },
   opcao: {
     borderWidth: 1,
-    borderColor: "#CEDBCF",
+    borderColor: "#B2C5C7",
     borderRadius: 10,
     padding: 14,
     marginBottom: 8
   },
   selecionada: {
-    backgroundColor: "#E8F5E9",
-    borderColor: "#2E7D32"
+    backgroundColor: "#E0F2F1",
+    borderColor: "#087883"
   },
   textoOpcao: {
-    color: "#2E7D32",
+    color: "#087883",
     fontSize: 15,
     fontWeight: "600"
   },
   campo: {
-    backgroundColor: "#F8FAF8",
+    backgroundColor: "#F4F8F8",
     borderWidth: 1,
-    borderColor: "#CEDBCF",
+    borderColor: "#B2C5C7",
     borderRadius: 10,
     padding: 14,
     minHeight: 50,
@@ -787,7 +787,7 @@ const styles = StyleSheet.create({
     textAlignVertical: "top"
   },
   botao: {
-    backgroundColor: "#2E7D32",
+    backgroundColor: "#087883",
     padding: 15,
     borderRadius: 10,
     alignItems: "center",
@@ -802,19 +802,19 @@ const styles = StyleSheet.create({
   desabilitado: { opacity: 0.6 },
   divisor: {
     height: 1,
-    backgroundColor: "#E7EEE8",
+    backgroundColor: "#E2E8E9",
     marginVertical: 24
   },
   atualizar: {
     borderWidth: 1,
-    borderColor: "#2E7D32",
+    borderColor: "#087883",
     padding: 12,
     borderRadius: 10,
     alignItems: "center",
     marginBottom: 16
   },
   card: {
-    backgroundColor: "#F4F7F4",
+    backgroundColor: "#F4F8F9",
     padding: 14,
     borderRadius: 12,
     marginBottom: 12
@@ -826,13 +826,13 @@ const styles = StyleSheet.create({
     marginBottom: 6
   },
   situacao: {
-    color: "#2E7D32",
+    color: "#087883",
     fontSize: 13,
     fontWeight: "600",
     marginBottom: 8
   },
   linha: {
-    color: "#34483A",
+    color: "#344848",
     fontSize: 14,
     marginBottom: 6
   },
@@ -844,7 +844,7 @@ const styles = StyleSheet.create({
   acoes: { gap: 8, marginTop: 10 },
   acaoEditar: {
     borderWidth: 1,
-    borderColor: "#2E7D32",
+    borderColor: "#087883",
     borderRadius: 10,
     padding: 12,
     alignItems: "center"
@@ -865,5 +865,5 @@ const styles = StyleSheet.create({
     marginTop: 10,
     marginBottom: 0
   },
-  situacaoCancelada: { color: "#607468" }
+  situacaoCancelada: { color: "#5D7275" }
 });
