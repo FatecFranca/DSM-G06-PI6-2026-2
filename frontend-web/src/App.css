@@ -2,11 +2,11 @@
   display: grid;
   grid-template-columns: 240px 1fr;
   min-height: 100vh;
-  background-color: #f4f7f4;
+  background-color: #f4f8f9;
 }
 
 .menu {
-  background-color: #1f5f32;
+  background-color: #065b63;
   color: white;
   padding: 32px 22px;
 }
@@ -17,7 +17,7 @@
 }
 
 .menu p {
-  color: #c8e6c9;
+  color: #b2dfdb;
   margin: 5px 0 35px;
 }
 
@@ -31,7 +31,7 @@
   background: transparent;
   border: none;
   border-radius: 8px;
-  color: #e8f5e9;
+  color: #e0f2f1;
   cursor: pointer;
   padding: 13px;
   text-align: left;
@@ -65,7 +65,7 @@ header p {
 }
 
 .nova-campanha {
-  background-color: #2e7d32;
+  background-color: #087883;
   border: none;
   border-radius: 8px;
   color: white;
@@ -120,7 +120,7 @@ header p {
 .titulo-tabela button {
   background: transparent;
   border: none;
-  color: #2e7d32;
+  color: #087883;
   cursor: pointer;
   font-weight: bold;
 }
@@ -132,7 +132,7 @@ table {
 
 th,
 td {
-  border-bottom: 1px solid #e5e9e6;
+  border-bottom: 1px solid #e2e8e9;
   padding: 15px 8px;
   text-align: left;
 }
@@ -154,8 +154,8 @@ td {
 }
 
 .status.ativa {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+  background-color: #e0f2f1;
+  color: #087883;
 }
 
 .status.planejada {
@@ -190,7 +190,7 @@ td {
 }
 
 .formulario-campanha label {
-  color: #34483a;
+  color: #344848;
   font-weight: 600;
 }
 
@@ -200,11 +200,11 @@ td {
   width: 100%;
   min-width: 0;
   padding: 12px;
-  border: 1px solid #bacabd;
+  border: 1px solid #b2c5c7;
   border-radius: 8px;
   font: inherit;
   color: #263238;
-  background: #f8faf8;
+  background: #f4f8f8;
 }
 
 .formulario-campanha textarea {
@@ -213,9 +213,9 @@ td {
 
 .campanhas button {
   padding: 10px 14px;
-  border: 1px solid #2e7d32;
+  border: 1px solid #087883;
   border-radius: 8px;
-  color: #1f5f32;
+  color: #065b63;
   background: white;
   cursor: pointer;
   font: inherit;
@@ -227,7 +227,7 @@ td {
 }
 
 .campanhas :focus-visible {
-  outline: 3px solid #2e7d32;
+  outline: 3px solid #087883;
   outline-offset: 3px;
 }
 
@@ -242,7 +242,7 @@ td {
 }
 
 .mensagem-sucesso {
-  color: #1f5f32;
+  color: #065b63;
 }
 
 .tabela-rolavel {
@@ -271,9 +271,9 @@ td {
 
 .botao-sair {
   padding: 10px 14px;
-  border: 1px solid #2e7d32;
+  border: 1px solid #087883;
   border-radius: 8px;
-  color: #1f5f32;
+  color: #065b63;
   background: white;
   cursor: pointer;
 }

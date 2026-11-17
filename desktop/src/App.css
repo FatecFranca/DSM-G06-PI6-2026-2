@@ -2,11 +2,11 @@
   display: grid;
   grid-template-columns: 230px 1fr;
   min-height: 100vh;
-  background-color: #f3f6f4;
+  background-color: #f4f8f9;
 }
 
 .menu-lateral {
-  background-color: #183d28;
+  background-color: #065b63;
   color: white;
   padding: 30px 22px;
 }
@@ -17,7 +17,7 @@
 }
 
 .menu-lateral p {
-  color: #b7d8c1;
+  color: #b2dfdb;
   margin: 5px 0 35px;
 }
 
@@ -31,7 +31,7 @@
   background: transparent;
   border: none;
   border-radius: 7px;
-  color: #dcebe1;
+  color: #e0f2f1;
   cursor: pointer;
   padding: 13px;
   text-align: left;
@@ -65,7 +65,7 @@ header p {
 }
 
 .botao-entrada {
-  background-color: #2e7d32;
+  background-color: #087883;
   border: none;
   border-radius: 8px;
   color: white;
@@ -130,7 +130,7 @@ table {
 
 th,
 td {
-  border-bottom: 1px solid #e5e9e6;
+  border-bottom: 1px solid #e2e8e9;
   padding: 14px 7px;
   text-align: left;
 }
@@ -158,20 +158,20 @@ td {
 }
 
 .situacao.recebida {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+  background-color: #e0f2f1;
+  color: #087883;
 }
 
 .detalhes {
   background: transparent;
   border: none;
-  color: #2e7d32;
+  color: #087883;
   cursor: pointer;
   font-weight: bold;
 }
 
 .estoque div {
-  border-bottom: 1px solid #e5e9e6;
+  border-bottom: 1px solid #e2e8e9;
   display: flex;
   flex-direction: column;
   padding: 13px 0;
@@ -189,9 +189,9 @@ td {
 
 .estoque > button {
   background: transparent;
-  border: 1px solid #2e7d32;
+  border: 1px solid #087883;
   border-radius: 7px;
-  color: #2e7d32;
+  color: #087883;
   cursor: pointer;
   margin-top: 18px;
   padding: 11px;
@@ -224,7 +224,7 @@ td {
 .usuarios-cadastro select {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #cbd5ce;
+  border: 1px solid #b2c5c7;
   border-radius: 7px;
   padding: 11px;
   font: inherit;
@@ -254,10 +254,10 @@ td {
 }
 
 .usuarios-atualizar {
-  border: 1px solid #2e7d32;
+  border: 1px solid #087883;
   border-radius: 7px;
   background: white;
-  color: #2e7d32;
+  color: #087883;
   cursor: pointer;
   padding: 9px 14px;
 }
@@ -267,7 +267,7 @@ td {
 }
 
 .usuarios-sucesso {
-  color: #2e7d32 !important;
+  color: #087883 !important;
 }
 
 .usuarios-erro {
@@ -315,9 +315,9 @@ td {
 }
 
 .campanhas-conteudo button {
-  border: 1px solid #2e7d32;
+  border: 1px solid #087883;
   border-radius: 7px;
-  background-color: #2e7d32;
+  background-color: #087883;
   color: white;
   cursor: pointer;
   font: inherit;
@@ -328,8 +328,8 @@ td {
 }
 
 .campanhas-conteudo button:hover:not(:disabled) {
-  background-color: #256628;
-  border-color: #256628;
+  background-color: #065b63;
+  border-color: #065b63;
 }
 
 .campanhas-conteudo button:disabled {
@@ -339,12 +339,12 @@ td {
 
 .campanhas-conteudo .campanhas-botao-secundario {
   background-color: white;
-  color: #2e7d32;
+  color: #087883;
 }
 
 .campanhas-conteudo .campanhas-botao-secundario:hover:not(:disabled) {
-  background-color: #e8f5e9;
-  border-color: #2e7d32;
+  background-color: #e0f2f1;
+  border-color: #087883;
 }
 
 .campanhas-conteudo .campanhas-botao-perigo {
@@ -359,9 +359,9 @@ td {
 }
 
 .campanhas-formulario {
-  border: 1px solid #e5e9e6;
+  border: 1px solid #e2e8e9;
   border-radius: 10px;
-  background-color: #fafcfb;
+  background-color: #f4f8f8;
   padding: 20px;
   margin-bottom: 22px;
 }
@@ -383,7 +383,7 @@ td {
 .campanhas-formulario select {
   box-sizing: border-box;
   width: 100%;
-  border: 1px solid #cbd5ce;
+  border: 1px solid #b2c5c7;
   border-radius: 7px;
   background-color: white;
   color: #263238;
@@ -395,8 +395,8 @@ td {
 .campanhas-formulario input:focus,
 .campanhas-formulario textarea:focus,
 .campanhas-formulario select:focus {
-  border-color: #2e7d32;
-  box-shadow: 0 0 0 3px #2e7d321c;
+  border-color: #087883;
+  box-shadow: 0 0 0 3px #0878831c;
 }
 
 .campanhas-formulario textarea {
@@ -434,7 +434,7 @@ td {
 }
 
 .campanhas-tabela tbody tr:hover {
-  background-color: #f7faf8;
+  background-color: #f4f8f8;
 }
 
 .campanhas-titulo {
@@ -458,8 +458,8 @@ td {
 }
 
 .campanhas-status.ativa {
-  background-color: #e8f5e9;
-  color: #2e7d32;
+  background-color: #e0f2f1;
+  color: #087883;
 }
 
 .campanhas-status.encerrada {
@@ -468,7 +468,7 @@ td {
 }
 
 .campanhas-sucesso {
-  color: #2e7d32;
+  color: #087883;
   font-size: 14px;
   font-weight: 500;
 }

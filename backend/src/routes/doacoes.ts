@@ -1,9 +1,9 @@
-
 import { Router } from "express";
 import type { PoolClient } from "pg";
 import { db } from "../db";
 import { proteger } from "../proteger";
 import { exigir, idValido } from "../validar";
+import { publishToDoacoesQueue } from "../messaging/sqsService";
 
 const rotas = Router();
 
@@ -36,10 +36,10 @@ function validarItens(valor: unknown): ItemDoado[] {
 
     exigir(
       typeof linha.quantidade === "number" &&
-      Number.isFinite(quantidade) &&
-      quantidade >= 0.01 &&
-      quantidade <= 99999999.99 &&
-      Math.abs(quantidade * 100 - Math.round(quantidade * 100)) < 0.000001,
+        Number.isFinite(quantidade) &&
+        quantidade >= 0.01 &&
+        quantidade <= 99999999.99 &&
+        Math.abs(quantidade * 100 - Math.round(quantidade * 100)) < 0.000001,
       "Informe uma quantidade positiva com até duas casas decimais."
     );
 
@@ -61,6 +61,7 @@ function validarObservacao(valor: unknown) {
   );
 
   const texto = typeof valor === "string" ? valor.trim() || null : null;
+
   exigir(
     !texto || texto.length <= 1000,
     "Use até 1000 caracteres na observação."
@@ -82,6 +83,7 @@ async function exigirDoacaoEditavel(
   );
 
   exigir(rows.length === 1, "Doação não encontrada.", 404);
+
   exigir(
     rows[0].status === "CADASTRADA",
     "Somente doações aguardando recebimento podem ser alteradas.",
@@ -115,17 +117,17 @@ rotas.get("/minhas", proteger("DOADOR"), async (_req, res) => {
 
   const { rows } = await db.query(
     `SELECT d.*, c.titulo AS titulo_campanha,
-      COALESCE((
-        SELECT json_agg(json_build_object(
-          'id_item', i.id_item,
-          'nome', i.nome,
-          'unidade_medida', i.unidade_medida,
-          'quantidade', di.quantidade
-        ) ORDER BY di.id_item_doacao)
-        FROM item_doacao di
-        JOIN item i ON i.id_item = di.id_item
-        WHERE di.id_doacao = d.id_doacao
-      ), '[]'::json) AS itens
+     COALESCE((
+       SELECT json_agg(json_build_object(
+         'id_item', i.id_item,
+         'nome', i.nome,
+         'unidade_medida', i.unidade_medida,
+         'quantidade', di.quantidade
+       ) ORDER BY di.id_item_doacao)
+       FROM item_doacao di
+       JOIN item i ON i.id_item = di.id_item
+       WHERE di.id_doacao = d.id_doacao
+     ), '[]'::json) AS itens
      FROM doacao d
      LEFT JOIN campanha c ON c.id_campanha = d.id_campanha
      WHERE d.id_doador = $1
@@ -147,18 +149,20 @@ rotas.post("/", proteger("DOADOR"), async (req, res) => {
     "A observação deve ser um texto."
   );
 
-  const observacao = typeof corpo.observacao === "string"
-    ? corpo.observacao.trim() || null
-    : null;
+  const observacao =
+    typeof corpo.observacao === "string"
+      ? corpo.observacao.trim() || null
+      : null;
 
   exigir(
     !observacao || observacao.length <= 1000,
     "Use até 1000 caracteres na observação."
   );
 
-  const idCampanha = corpo.id_campanha == null
-    ? null
-    : idValido(corpo.id_campanha);
+  const idCampanha =
+    corpo.id_campanha == null
+      ? null
+      : idValido(corpo.id_campanha);
 
   exigir(
     idCampanha === null || idCampanha <= 2147483647,
@@ -223,6 +227,23 @@ rotas.post("/", proteger("DOADOR"), async (req, res) => {
     }
 
     await cliente.query("COMMIT");
+
+    // Publica o evento sem desfazer o cadastro se o SQS falhar.
+    try {
+      const resultadoSqs = await publishToDoacoesQueue({
+        evento: "NOVA_DOACAO",
+        id_doacao: doacao.id_doacao,
+        id_doador: idDoador,
+        data_cadastro: doacao.data_cadastro
+      });
+
+      if (resultadoSqs) {
+        console.log("Publicação da doação no SQS confirmada.");
+      }
+    } catch (erroSqs) {
+      console.error("FALHA AO ENVIAR PARA O SQS:", erroSqs);
+    }
+
     res.status(201).json(doacao);
   } catch (erro) {
     await cliente.query("ROLLBACK");
