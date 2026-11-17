@@ -36,10 +36,10 @@ function validarItens(valor: unknown): ItemDoado[] {
 
     exigir(
       typeof linha.quantidade === "number" &&
-      Number.isFinite(quantidade) &&
-      quantidade >= 0.01 &&
-      quantidade <= 99999999.99 &&
-      Math.abs(quantidade * 100 - Math.round(quantidade * 100)) < 0.000001,
+        Number.isFinite(quantidade) &&
+        quantidade >= 0.01 &&
+        quantidade <= 99999999.99 &&
+        Math.abs(quantidade * 100 - Math.round(quantidade * 100)) < 0.000001,
       "Informe uma quantidade positiva com até duas casas decimais."
     );
 
@@ -61,6 +61,7 @@ function validarObservacao(valor: unknown) {
   );
 
   const texto = typeof valor === "string" ? valor.trim() || null : null;
+
   exigir(
     !texto || texto.length <= 1000,
     "Use até 1000 caracteres na observação."
@@ -82,6 +83,7 @@ async function exigirDoacaoEditavel(
   );
 
   exigir(rows.length === 1, "Doação não encontrada.", 404);
+
   exigir(
     rows[0].status === "CADASTRADA",
     "Somente doações aguardando recebimento podem ser alteradas.",
@@ -147,18 +149,20 @@ rotas.post("/", proteger("DOADOR"), async (req, res) => {
     "A observação deve ser um texto."
   );
 
-  const observacao = typeof corpo.observacao === "string"
-    ? corpo.observacao.trim() || null
-    : null;
+  const observacao =
+    typeof corpo.observacao === "string"
+      ? corpo.observacao.trim() || null
+      : null;
 
   exigir(
     !observacao || observacao.length <= 1000,
     "Use até 1000 caracteres na observação."
   );
 
-  const idCampanha = corpo.id_campanha == null
-    ? null
-    : idValido(corpo.id_campanha);
+  const idCampanha =
+    corpo.id_campanha == null
+      ? null
+      : idValido(corpo.id_campanha);
 
   exigir(
     idCampanha === null || idCampanha <= 2147483647,
@@ -224,15 +228,18 @@ rotas.post("/", proteger("DOADOR"), async (req, res) => {
 
     await cliente.query("COMMIT");
 
-    // Envio para a mensageria na AWS (SQS) isolado com try/catch próprio
+    // Publica o evento sem desfazer o cadastro se o SQS falhar.
     try {
-      await publishToDoacoesQueue({
+      const resultadoSqs = await publishToDoacoesQueue({
         evento: "NOVA_DOACAO",
         id_doacao: doacao.id_doacao,
         id_doador: idDoador,
         data_cadastro: doacao.data_cadastro
       });
-      console.log("Mensagem enviada com sucesso para o SQS!");
+
+      if (resultadoSqs) {
+        console.log("Publicação da doação no SQS confirmada.");
+      }
     } catch (erroSqs) {
       console.error("FALHA AO ENVIAR PARA O SQS:", erroSqs);
     }
